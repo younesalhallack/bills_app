@@ -11,8 +11,81 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  int _selectedView = 0; // 0: حسب الفئة, 1: شهرياً (إيرادات vs مصاريف)
+  int _selectedView = 0; // 1:  by category, 0:by monthly
+  int _categoryType = 0; // 0: income, 1: outcome
   final String _selectedMonth = 'ديسمبر 2023';
+
+  // ---  outcome ---
+  final List<Map<String, dynamic>> _expenseCategories = [
+    {
+      'title': 'الطعام',
+      'percent': '40%',
+      'value': 40.0,
+      'amount': '1,640 ر.س',
+      'icon': HeroIcons.cake,
+      'color': AppColors.success,
+    },
+    {
+      'title': 'السكن',
+      'percent': '30%',
+      'value': 30.0,
+      'amount': '1,230 ر.س',
+      'icon': HeroIcons.home,
+      'color': AppColors.primary,
+    },
+    {
+      'title': 'نقل',
+      'percent': '15%',
+      'value': 15.0,
+      'amount': '615 ر.س',
+      'icon': HeroIcons.truck,
+      'color': AppColors.accent,
+    },
+    {
+      'title': 'أخرى',
+      'percent': '15%',
+      'value': 15.0,
+      'amount': '615 ر.س',
+      'icon': HeroIcons.ellipsisHorizontal,
+      'color': AppColors.textLight,
+    },
+  ];
+
+  // ---  icome data ---
+  final List<Map<String, dynamic>> _incomeCategories = [
+    {
+      'title': 'الراتب',
+      'percent': '60%',
+      'value': 60.0,
+      'amount': '4,080 ر.س',
+      'icon': HeroIcons.banknotes,
+      'color': AppColors.success,
+    },
+    {
+      'title': 'عمل حر',
+      'percent': '25%',
+      'value': 25.0,
+      'amount': '1,700 ر.س',
+      'icon': HeroIcons.briefcase,
+      'color': AppColors.primary,
+    },
+    {
+      'title': 'استثمارات',
+      'percent': '10%',
+      'value': 10.0,
+      'amount': '680 ر.س',
+      'icon': HeroIcons.chartBar,
+      'color': AppColors.accent,
+    },
+    {
+      'title': 'أخرى',
+      'percent': '5%',
+      'value': 5.0,
+      'amount': '340 ر.س',
+      'icon': HeroIcons.ellipsisHorizontal,
+      'color': AppColors.textLight,
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -24,22 +97,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
           padding: AppSpacing.screenPadding,
           child: Column(
             children: [
-              // 1. محدد الشهر (Month Selector)
+              //  Month Selector
               _buildMonthPicker(),
               const SizedBox(height: AppSpacing.md),
 
-              // 2. محول طبيعة عرض التقرير (Toggle View Bar)
+              //  Toggle View Bar
               _buildViewToggle(),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
 
-              // 3. قسم الرسم البياني المتغير بناءً على الاختيار
+              if (_selectedView == 0) ...[
+                _buildCategoryTypeToggle(),
+                const SizedBox(height: AppSpacing.lg),
+              ] else ...[
+                const SizedBox(height: AppSpacing.sm),
+              ],
+
+              //
               _selectedView == 0
                   ? _buildCategoryPieChartCard()
                   : _buildMonthlyBarChartCard(),
 
               const SizedBox(height: AppSpacing.xl),
 
-              // 4. قائمة التفاصيل السفلية (Category Breakdown)
+              // category Breakdown
               _buildCategoryBreakdownList(),
             ],
           ),
@@ -48,7 +128,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- الهيدر العلوي ---
+  // --- App bar  ---
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -71,7 +151,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- أداة اختيار الشهر ---
+  // ---chose a month---
   Widget _buildMonthPicker() {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -100,12 +180,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- شريط التنقل بين أنماط التقرير ---
+  // --- main toggle bar---
   Widget _buildViewToggle() {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.border.withOpacity(0.5),
+        color: AppColors.border.withValues(alpha: 0.5),
         borderRadius: AppSpacing.borderRadiusMd,
       ),
       child: Row(
@@ -125,6 +205,67 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ---CategoryTypeToggle bar---
+  Widget _buildCategoryTypeToggle() {
+    return Row(
+      children: [
+        Expanded(
+          child: _subToggleButton(
+            title: 'المصاريف',
+            isSelected: _categoryType == 0,
+            activeColor: AppColors.danger,
+            onTap: () => setState(() => _categoryType = 0),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _subToggleButton(
+            title: 'الإيرادات',
+            isSelected: _categoryType == 1,
+            activeColor: AppColors.success,
+            onTap: () => setState(() => _categoryType = 1),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _subToggleButton({
+    required String title,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.12)
+              : AppColors.cardBackground,
+          borderRadius: AppSpacing.borderRadiusMd,
+          border: Border.all(
+            color: isSelected ? activeColor : AppColors.border,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? activeColor : AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -158,14 +299,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- 1. الرسم البياني الدائري (توزيع المصاريف حسب الفئة) ---
+  //  destrepioted category based type piechart
   Widget _buildCategoryPieChartCard() {
+    final currentData = _categoryType == 0
+        ? _expenseCategories
+        : _incomeCategories;
+    final title = _categoryType == 0
+        ? 'توزيع المصاريف حسب الفئة'
+        : 'توزيع الإيرادات حسب الفئة';
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: AppDecorations.cardDecoration,
       child: Column(
         children: [
-          const Text('توزيع المصاريف حسب الفئة', style: AppTextStyles.h2),
+          Text(title, style: AppTextStyles.h2),
           const SizedBox(height: AppSpacing.lg),
           SizedBox(
             height: 200,
@@ -173,52 +321,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
               PieChartData(
                 sectionsSpace: 3,
                 centerSpaceRadius: 50,
-                sections: [
-                  PieChartSectionData(
-                    color: AppColors.success,
-                    value: 40,
-                    title: 'طعام 40%',
+                sections: currentData.map((item) {
+                  return PieChartSectionData(
+                    color: item['color'] as Color,
+                    value: (item['value'] as num).toDouble(),
+                    title: '${item['title']} ${item['percent']}',
                     radius: 45,
                     titleStyle: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
-                  ),
-                  PieChartSectionData(
-                    color: AppColors.primary,
-                    value: 30,
-                    title: 'سكن 30%',
-                    radius: 45,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    color: AppColors.accent,
-                    value: 15,
-                    title: 'نقل 15%',
-                    radius: 45,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    color: AppColors.textLight,
-                    value: 15,
-                    title: 'أخرى 15%',
-                    radius: 45,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
           ),
@@ -227,7 +342,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- 2. الرسم البياني الشريطي (مقارنة الإيرادات والمصاريف شهرياً) ---
+  // compare monthly barchart
   Widget _buildMonthlyBarChartCard() {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -236,7 +351,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           const Text('الإيرادات والمصاريف شهرياً', style: AppTextStyles.h2),
           const SizedBox(height: AppSpacing.md),
-          // دليل الألوان
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -276,9 +390,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
                 barGroups: [
-                  _makeGroupData(0, 5000, 3200), // أكتوبر
-                  _makeGroupData(1, 6200, 4100), // نوفمبر
-                  _makeGroupData(2, 6800, 4100), // ديسمبر
+                  _makeGroupData(0, 5000, 3200),
+                  _makeGroupData(1, 6200, 4100),
+                  _makeGroupData(2, 6800, 4100),
                 ],
               ),
             ),
@@ -322,43 +436,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- قائمة التفاصيل والنسب لكل فئة ---
+  // --- قائمة التفاصيل والنسب لكل فئة (ديناميكية حسب المصاريف/الإيرادات) ---
   Widget _buildCategoryBreakdownList() {
-    final categories = [
-      {
-        'title': 'الطعام',
-        'percent': '40%',
-        'amount': '1,640 ر.س',
-        'icon': HeroIcons.cake,
-        'color': AppColors.success,
-      },
-      {
-        'title': 'السكن',
-        'percent': '30%',
-        'amount': '1,230 ر.س',
-        'icon': HeroIcons.home,
-        'color': AppColors.primary,
-      },
-      {
-        'title': 'نقل',
-        'percent': '15%',
-        'amount': '615 ر.س',
-        'icon': HeroIcons.truck,
-        'color': AppColors.accent,
-      },
-      {
-        'title': 'أخرى',
-        'percent': '15%',
-        'amount': '615 ر.س',
-        'icon': HeroIcons.ellipsisHorizontal,
-        'color': AppColors.textLight,
-      },
-    ];
+    final categories = _categoryType == 0
+        ? _expenseCategories
+        : _incomeCategories;
+    final listTitle = _categoryType == 0
+        ? 'تفاصيل المصاريف'
+        : 'تفاصيل الإيرادات';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('تفاصيل المصاريف', style: AppTextStyles.h2),
+        Text(listTitle, style: AppTextStyles.h2),
         const SizedBox(height: AppSpacing.sm),
         ListView.separated(
           shrinkWrap: true,
@@ -393,7 +483,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       children: [
                         Text(cat['title'] as String, style: AppTextStyles.h3),
                         Text(
-                          'نسبة الاستهلاك: ${cat['percent']}',
+                          'نسبة التحصيل/الاستهلاك: ${cat['percent']}',
                           style: AppTextStyles.bodySmall,
                         ),
                       ],

@@ -2,6 +2,12 @@ import 'package:bills_app/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
 
+import 'edit_profile_screen.dart';
+import 'currency_selection_screen.dart';
+import 'language_selection_screen.dart';
+import 'backup_settings_screen.dart';
+import 'security_settings_screen.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -11,6 +17,49 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('تسجيل الخروج', style: AppTextStyles.h2),
+        content: const Text(
+          'هل أنت تأكد من أنك تريد تسجيل الخروج من التطبيق؟',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'إلغاء',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              // logout logic
+            },
+            child: const Text(
+              'تسجيل الخروج',
+              style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. بطاقة الملف الشخصي
+              // profile card
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: AppDecorations.cardDecoration,
@@ -61,14 +110,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         HeroIcons.pencilSquare,
                         color: AppColors.textSecondary,
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const EditProfileScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
 
-              // 2. إعدادات الحساب والتطبيق
+              //  account settings
               const Text('التفضيلات العامة', style: AppTextStyles.h3),
               const SizedBox(height: AppSpacing.sm),
 
@@ -77,13 +133,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: HeroIcons.currencyDollar,
                   title: 'العملة الأساسية',
                   subtitle: 'ريال سعودي (ر.س)',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CurrencySelectionScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildSettingTile(
                   icon: HeroIcons.language,
                   title: 'اللغة',
                   subtitle: 'العربية',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LanguageSelectionScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildSwitchTile(
                   icon: HeroIcons.bell,
@@ -95,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ]),
               const SizedBox(height: AppSpacing.lg),
 
-              // 3. الأمان والبيانات
+              //  Data & security
               const Text('الأمان والبيانات', style: AppTextStyles.h3),
               const SizedBox(height: AppSpacing.sm),
 
@@ -104,21 +174,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: HeroIcons.cloudArrowUp,
                   title: 'النسخ الاحتياطي',
                   subtitle: 'آخر مزامنة: اليوم 09:00 ص',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BackupSettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildSettingTile(
                   icon: HeroIcons.lockClosed,
                   title: 'قفل التطبيق (بصمة الوجه/الإصبع)',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SecuritySettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ]),
               const SizedBox(height: AppSpacing.lg),
 
-              // 4. تسجيل الخروج
+              //  logout
               SizedBox(
                 width: double.infinity,
                 child: TextButton.icon(
-                  onPressed: () {},
+                  onPressed: _showLogoutDialog,
                   icon: const HeroIcon(
                     HeroIcons.arrowLeftStartOnRectangle,
                     color: AppColors.danger,

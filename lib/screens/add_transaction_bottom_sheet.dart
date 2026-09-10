@@ -27,27 +27,83 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
 
-  final List<Map<String, dynamic>> categories = [
-    {'name': 'طعام', 'icon': HeroIcons.cake, 'color': AppColors.bgGroceries},
-    {'name': 'سكن', 'icon': HeroIcons.home, 'color': AppColors.bgHousing},
-    {'name': 'نقل', 'icon': HeroIcons.truck, 'color': AppColors.bgElectricity},
-    {'name': 'راتب', 'icon': HeroIcons.briefcase, 'color': AppColors.bgSalary},
+  List<Map<String, dynamic>> categories = [
+    //
+    {
+      'name': 'طعام',
+      'icon': HeroIcons.cake,
+      'color': AppColors.bgGroceries,
+      'isExpense': true,
+    },
+    {
+      'name': 'سكن',
+      'icon': HeroIcons.home,
+      'color': AppColors.bgHousing,
+      'isExpense': true,
+    },
+    {
+      'name': 'نقل',
+      'icon': HeroIcons.truck,
+      'color': AppColors.bgElectricity,
+      'isExpense': true,
+    },
     {
       'name': 'تسوق',
       'icon': HeroIcons.shoppingBag,
       'color': AppColors.bgGroceries,
+      'isExpense': true,
     },
+
+    //
+    {
+      'name': 'راتب',
+      'icon': HeroIcons.briefcase,
+      'color': AppColors.bgSalary,
+      'isExpense': false,
+    },
+    {
+      'name': 'مكافأة',
+      'icon': HeroIcons.gift,
+      'color': AppColors.bgSalary,
+      'isExpense': false,
+    },
+    {
+      'name': 'استثمار',
+      'icon': HeroIcons.chartBar,
+      'color': AppColors.bgSalary,
+      'isExpense': false,
+    },
+
+    //
     {
       'name': 'أخرى',
       'icon': HeroIcons.ellipsisHorizontal,
       'color': AppColors.divider,
+      'isExpense': true,
     },
   ];
 
+  // filter base on type
+  List<Map<String, dynamic>> get _filteredCategories {
+    return categories.where((cat) => cat['isExpense'] == isExpense).toList();
+  }
+
+  @override
+  void dispose() {
+    amountController.dispose();
+    noteController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // مراعاة كيبورد الموبايل عند الظهور
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final filteredList = _filteredCategories;
+
+    if (!filteredList.any((cat) => cat['name'] == selectedCategory) &&
+        filteredList.isNotEmpty) {
+      selectedCategory = filteredList.first['name'];
+    }
 
     return Container(
       padding: EdgeInsets.only(
@@ -67,7 +123,7 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // مقبض السحب العلوي (Drag Handle)
+            // Drag Handle
             Center(
               child: Container(
                 width: 40,
@@ -80,13 +136,11 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
             ),
             const SizedBox(height: AppSpacing.md),
 
-            // عنوان النافذة
             const Center(
               child: Text('إضافة معاملة جديدة', style: AppTextStyles.h2),
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // محول (مصروف / إيراد)
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -100,7 +154,9 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
                       title: 'مصروف',
                       isSelected: isExpense,
                       color: AppColors.danger,
-                      onTap: () => setState(() => isExpense = true),
+                      onTap: () => setState(() {
+                        isExpense = true;
+                      }),
                     ),
                   ),
                   Expanded(
@@ -108,7 +164,9 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
                       title: 'إيراد',
                       isSelected: !isExpense,
                       color: AppColors.success,
-                      onTap: () => setState(() => isExpense = false),
+                      onTap: () => setState(() {
+                        isExpense = false;
+                      }),
                     ),
                   ),
                 ],
@@ -116,7 +174,7 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // حقل المبلغ
+            //  amount field
             const Text('المبلغ', style: AppTextStyles.bodySmall),
             const SizedBox(height: AppSpacing.xs),
             TextField(
@@ -141,21 +199,46 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // اختيار الفئة
             const Text('الفئة', style: AppTextStyles.bodySmall),
             const SizedBox(height: AppSpacing.xs),
             SizedBox(
               height: 45,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: categories.length,
+                itemCount: filteredList.length + 1,
                 separatorBuilder: (_, _) =>
                     const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) {
-                  final cat = categories[index];
+                  if (index == filteredList.length) {
+                    return ActionChip(
+                      onPressed: _showAddCategoryDialog,
+                      avatar: const Icon(
+                        Icons.add,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      label: const Text(
+                        'إضافة فئة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      side: const BorderSide(color: AppColors.primary),
+                    );
+                  }
+
+                  final cat = filteredList[index];
                   final isSelected = selectedCategory == cat['name'];
 
                   return ChoiceChip(
+                    avatar: HeroIcon(
+                      cat['icon'] as HeroIcons,
+                      size: 18,
+                      color: isSelected ? Colors.white : AppColors.textPrimary,
+                    ),
                     label: Text(cat['name']),
                     selected: isSelected,
                     onSelected: (val) {
@@ -176,7 +259,6 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // حقل التاريخ والملاحظة
             Row(
               children: [
                 Expanded(
@@ -225,13 +307,12 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
             ),
             const SizedBox(height: AppSpacing.xl),
 
-            // زر الحفظ
+            // save
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
-                  // هنا سنتولى حفظ البيانات لاحقاً
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
@@ -297,5 +378,185 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
     if (picked != null) {
       setState(() => selectedDate = picked);
     }
+  }
+
+  void _showAddCategoryDialog() {
+    final categoryNameController = TextEditingController();
+    bool newCategoryIsExpense = isExpense;
+    HeroIcons selectedIcon = HeroIcons.tag;
+
+    final availableIcons = [
+      HeroIcons.tag,
+      HeroIcons.shoppingCart,
+      HeroIcons.academicCap,
+      HeroIcons.heart,
+      HeroIcons.film,
+      HeroIcons.wrench,
+      HeroIcons.banknotes,
+      HeroIcons.creditCard,
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.cardBackground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+              ),
+              title: const Text(
+                'إضافة فئة جديدة',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.h2,
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    //    chose category type
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Center(child: Text('مصروف')),
+                            selected: newCategoryIsExpense,
+                            selectedColor: AppColors.danger,
+                            onSelected: (val) {
+                              setDialogState(() => newCategoryIsExpense = true);
+                            },
+                            labelStyle: TextStyle(
+                              fontFamily: 'Cairo',
+                              color: newCategoryIsExpense
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Center(child: Text('إيراد')),
+                            selected: !newCategoryIsExpense,
+                            selectedColor: AppColors.success,
+                            onSelected: (val) {
+                              setDialogState(
+                                () => newCategoryIsExpense = false,
+                              );
+                            },
+                            labelStyle: TextStyle(
+                              fontFamily: 'Cairo',
+                              color: !newCategoryIsExpense
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // category name
+                    TextField(
+                      controller: categoryNameController,
+                      style: AppTextStyles.bodyMedium,
+                      decoration: InputDecoration(
+                        hintText: 'اسم الفئة (مثال: هدايا، تعليم)...',
+                        hintStyle: AppTextStyles.bodySmall,
+                        filled: true,
+                        fillColor: AppColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: AppSpacing.borderRadiusMd,
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // category icon
+                    const Text('اختر أيقونة:', style: AppTextStyles.bodySmall),
+                    const SizedBox(height: AppSpacing.xs),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: availableIcons.map((icon) {
+                        final isSelected = selectedIcon == icon;
+                        return InkWell(
+                          onTap: () =>
+                              setDialogState(() => selectedIcon = icon),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.background,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: HeroIcon(
+                              icon,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                              size: 22,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'إلغاء',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.borderRadiusMd,
+                    ),
+                  ),
+                  onPressed: () {
+                    final name = categoryNameController.text.trim();
+                    if (name.isNotEmpty) {
+                      setState(() {
+                        categories.add({
+                          'name': name,
+                          'icon': selectedIcon,
+                          'color': AppColors.primary,
+                          'isExpense': newCategoryIsExpense,
+                        });
+
+                        isExpense = newCategoryIsExpense;
+                        selectedCategory = name;
+                      });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text(
+                    'إضافة',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }

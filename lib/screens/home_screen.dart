@@ -41,7 +41,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // AppBar الخاص بالرئيسية
+  // AppBar
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.transparent,
