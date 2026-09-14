@@ -54,17 +54,16 @@ class _MainScreenState extends State<MainScreen> {
 
   // قائمة الصفحات
   final List<Widget> _pages = const [
-    HomeScreen(), // صفحة الرئيسية
-    ReportsScreen(), // صفحة التقارير
-    TransactionsHistoryScreen(), // صفحة المعاملات
-    SettingsScreen(), // صفحة الإعدادات
+    HomeScreen(),
+    ReportsScreen(),
+    TransactionsHistoryScreen(),
+    SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      // استخدام IndexedStack للحفاظ على حالة الصفحات عند التنقل
       body: IndexedStack(index: _selectedIndex, children: _pages),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
@@ -80,7 +79,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // شريط التنقل السفلي
   Widget _buildBottomNavigationBar() {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),

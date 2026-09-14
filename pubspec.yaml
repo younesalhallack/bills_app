@@ -23,6 +23,9 @@ dependencies:
   intl: ^0.20.2
   flutter_localizations:
     sdk: flutter
+  isar_community: ^3.3.2
+  isar_community_flutter_libs: ^3.3.2
+  path_provider: ^2.1.6
   #google_fonts: ^8.2.1
 
 dev_dependencies:
@@ -31,6 +34,8 @@ dev_dependencies:
 
  
   flutter_lints: ^6.0.0
+  build_runner: ^2.15.1
+  isar_community_generator: ^3.3.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
