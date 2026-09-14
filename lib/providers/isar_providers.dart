@@ -42,6 +42,7 @@ class TransactionNotifier extends Notifier<void> {
 
     await IsarService.db.writeTxn(() async {
       await IsarService.db.transactionModels.put(newTransaction);
+      newTransaction.category.value = category;
       await newTransaction.category.save(); // حفظ رابط الفئة
     });
   }
@@ -56,4 +57,28 @@ class TransactionNotifier extends Notifier<void> {
 
 final transactionNotifierProvider = NotifierProvider<TransactionNotifier, void>(
   TransactionNotifier.new,
+);
+
+class CategoryNotifier extends Notifier<void> {
+  @override
+  void build() {}
+
+  Future<void> addCategory({
+    required String name,
+    required String iconName,
+    required String type, // 'expense' أو 'income'
+  }) async {
+    final newCategory = CategoriesModel()
+      ..name = name
+      ..iconName = iconName
+      ..type = type;
+
+    await IsarService.db.writeTxn(() async {
+      await IsarService.db.categoriesModels.put(newCategory);
+    });
+  }
+}
+
+final categoryNotifierProvider = NotifierProvider<CategoryNotifier, void>(
+  CategoryNotifier.new,
 );

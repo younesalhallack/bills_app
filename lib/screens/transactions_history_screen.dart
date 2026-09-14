@@ -1,23 +1,48 @@
 import 'package:bills_app/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:intl/intl.dart';
 
-class TransactionsHistoryScreen extends StatefulWidget {
+import '../model/transaction_model.dart';
+import '../providers/isar_providers.dart';
+
+class TransactionsHistoryScreen extends ConsumerStatefulWidget {
   const TransactionsHistoryScreen({super.key});
 
   @override
-  State<TransactionsHistoryScreen> createState() =>
+  ConsumerState<TransactionsHistoryScreen> createState() =>
       _TransactionsHistoryScreenState();
 }
 
-class _TransactionsHistoryScreenState extends State<TransactionsHistoryScreen> {
+class _TransactionsHistoryScreenState
+    extends ConsumerState<TransactionsHistoryScreen> {
   int _selectedFilterIndex = 0; // 0: الكل, 1: مصاريف, 2: إيرادات
   final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   final List<String> _filters = ['الكل', 'مصاريف', 'إيرادات'];
 
   @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final transactionsAsync = ref.watch(transactionsStreamProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -45,7 +70,7 @@ class _TransactionsHistoryScreenState extends State<TransactionsHistoryScreen> {
                 controller: _searchController,
                 style: AppTextStyles.bodyMedium,
                 decoration: InputDecoration(
-                  hintText: 'البحث عن معاملة أو فئة...',
+                  hintText: 'البحث عن معاملة أو ملاحظة...',
                   hintStyle: AppTextStyles.bodySmall,
                   prefixIcon: const Padding(
                     padding: EdgeInsets.all(12.0),
@@ -54,6 +79,12 @@ class _TransactionsHistoryScreenState extends State<TransactionsHistoryScreen> {
                       color: AppColors.textSecondary,
                     ),
                   ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () => _searchController.clear(),
+                        )
+                      : null,
                   filled: true,
                   fillColor: AppColors.cardBackground,
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -110,58 +141,94 @@ class _TransactionsHistoryScreenState extends State<TransactionsHistoryScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // 3. قائمة المعاملات الممتدة
+              // 3. قائمة المعاملات الممتدة مع تطبيق الفلاتر والبحث
               Expanded(
-                child: ListView(
-                  children: [
-                    _buildDateHeader('اليوم - 15 ديسمبر'),
-                    _buildTransactionItem(
-                      'راتب',
-                      '12:30 م',
-                      '+4,500 ر.س',
-                      true,
-                      HeroIcons.briefcase,
-                      AppColors.bgSalary,
-                    ),
-                    _buildTransactionItem(
-                      'فاتورة كهرباء',
-                      '04:15 م',
-                      '-320 ر.س',
-                      false,
-                      HeroIcons.bolt,
-                      AppColors.bgElectricity,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
+                child: transactionsAsync.when(
+                  data: (allTransactions) {
+                    // تطبيق الفلترة بالبحث والنوع
+                    final filteredList = allTransactions.where((tx) {
+                      final categoryName = tx.category.value?.name ?? '';
+                      final note = tx.note ?? '';
 
-                    _buildDateHeader('الأمس - 14 ديسمبر'),
-                    _buildTransactionItem(
-                      'بقالة',
-                      '08:20 م',
-                      '-150 ر.س',
-                      false,
-                      HeroIcons.shoppingBag,
-                      AppColors.bgGroceries,
-                    ),
-                    _buildTransactionItem(
-                      'تعبئة وقود',
-                      '01:10 م',
-                      '-80 ر.س',
-                      false,
-                      HeroIcons.truck,
-                      AppColors.bgElectricity,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
+                      // أ) التصفية بحسب نص البحث
+                      final matchesSearch =
+                          categoryName.toLowerCase().contains(_searchQuery) ||
+                          note.toLowerCase().contains(_searchQuery);
 
-                    _buildDateHeader('12 ديسمبر'),
-                    _buildTransactionItem(
-                      'إيجار السكن',
-                      '10:00 ص',
-                      '-1,200 ر.س',
-                      false,
-                      HeroIcons.home,
-                      AppColors.bgHousing,
-                    ),
-                  ],
+                      // ب) التصفية بحسب النوع (0: الكل، 1: مصاريف، 2: إيرادات)
+                      bool matchesType = true;
+                      if (_selectedFilterIndex == 1) {
+                        matchesType = tx.amount < 0;
+                      } else if (_selectedFilterIndex == 2) {
+                        matchesType = tx.amount > 0;
+                      }
+
+                      return matchesSearch && matchesType;
+                    }).toList();
+
+                    if (filteredList.isEmpty) {
+                      return Center(
+                        child: Text(
+                          _searchQuery.isNotEmpty || _selectedFilterIndex != 0
+                              ? 'لا توجد نتائج تطابق التصفية'
+                              : 'لا توجد معاملات مسجلة حتى الآن',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      );
+                    }
+
+                    // ج) تجميع المعاملات المفلترة حسب التاريخ
+                    final groupedTransactions = _groupTransactionsByDate(
+                      filteredList,
+                    );
+
+                    return ListView.builder(
+                      itemCount: groupedTransactions.length,
+                      itemBuilder: (context, index) {
+                        final dateHeader = groupedTransactions.keys.elementAt(
+                          index,
+                        );
+                        final dayTransactions =
+                            groupedTransactions[dateHeader]!;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDateHeader(dateHeader),
+                            ...dayTransactions.map((tx) {
+                              final category = tx.category.value;
+                              final isIncome = tx.amount > 0;
+                              final formattedAmount =
+                                  '${isIncome ? "+" : ""}${tx.amount.toStringAsFixed(2)} ${tx.currencyCode}';
+                              final formattedTime = DateFormat(
+                                'hh:mm a',
+                                'ar',
+                              ).format(tx.date);
+
+                              return _buildTransactionItem(
+                                category?.name ?? (tx.note ?? 'معاملة'),
+                                formattedTime,
+                                formattedAmount,
+                                isIncome,
+                                _getHeroIconData(category?.iconName),
+                                isIncome
+                                    ? AppColors.success.withValues(alpha: 0.15)
+                                    : AppColors.danger.withValues(alpha: 0.15),
+                                tx.note,
+                              );
+                            }),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) =>
+                      Center(child: Text('حدث خطأ في تحميل البيانات: $err')),
                 ),
               ),
             ],
@@ -169,6 +236,56 @@ class _TransactionsHistoryScreenState extends State<TransactionsHistoryScreen> {
         ),
       ),
     );
+  }
+
+  // تجميع المعاملات بحسب التاريخ
+  Map<String, List<TransactionModel>> _groupTransactionsByDate(
+    List<TransactionModel> transactions,
+  ) {
+    final Map<String, List<TransactionModel>> groups = {};
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    for (var tx in transactions) {
+      final txDate = DateTime(tx.date.year, tx.date.month, tx.date.day);
+      String dateKey;
+
+      if (txDate == today) {
+        dateKey = 'اليوم - ${DateFormat('d MMMM', 'ar').format(tx.date)}';
+      } else if (txDate == yesterday) {
+        dateKey = 'الأمس - ${DateFormat('d MMMM', 'ar').format(tx.date)}';
+      } else {
+        dateKey = DateFormat('d MMMM yyyy', 'ar').format(tx.date);
+      }
+
+      if (!groups.containsKey(dateKey)) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey]!.add(tx);
+    }
+    return groups;
+  }
+
+  HeroIcons _getHeroIconData(String? iconName) {
+    switch (iconName) {
+      case 'shoppingCart':
+        return HeroIcons.shoppingCart;
+      case 'academicCap':
+        return HeroIcons.academicCap;
+      case 'heart':
+        return HeroIcons.heart;
+      case 'film':
+        return HeroIcons.film;
+      case 'wrench':
+        return HeroIcons.wrench;
+      case 'banknotes':
+        return HeroIcons.banknotes;
+      case 'creditCard':
+        return HeroIcons.creditCard;
+      default:
+        return HeroIcons.tag;
+    }
   }
 
   Widget _buildDateHeader(String date) {
@@ -187,42 +304,74 @@ class _TransactionsHistoryScreenState extends State<TransactionsHistoryScreen> {
     String amount,
     bool isIncome,
     HeroIcons icon,
-    Color bgColor,
-  ) {
+    Color bgColor, [
+    String? note,
+  ]) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: AppDecorations.cardDecoration,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(child: HeroIcon(icon, color: AppColors.textPrimary)),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: HeroIcon(icon, color: AppColors.textPrimary),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTextStyles.h3),
+                    Text(time, style: AppTextStyles.bodySmall),
+                  ],
+                ),
+              ),
+              Text(
+                amount,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: isIncome ? AppColors.success : AppColors.danger,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
+
+          // قسم الملاحظات بدون خط فاصل (تم حذف الـ Divider)
+          if (note != null && note.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTextStyles.h3),
-                Text(time, style: AppTextStyles.bodySmall),
+                const HeroIcon(
+                  HeroIcons.documentText,
+                  size: 14,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    note,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: isIncome ? AppColors.success : AppColors.textPrimary,
-            ),
-          ),
+          ],
         ],
       ),
     );

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:isar_community/isar.dart';
 
 part 'categories_model.g.dart';

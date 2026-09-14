@@ -4,12 +4,16 @@ import 'package:bills_app/screens/home_screen.dart';
 import 'package:bills_app/screens/reports_screen.dart';
 import 'package:bills_app/screens/settings_screen.dart';
 import 'package:bills_app/screens/transactions_history_screen.dart';
+import 'package:bills_app/services/isar_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await IsarService.initialize();
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
