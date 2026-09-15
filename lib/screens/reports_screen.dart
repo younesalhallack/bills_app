@@ -1,134 +1,176 @@
 import 'package:bills_app/core/constants/app_constants.dart';
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:intl/intl.dart';
 
-class ReportsScreen extends StatefulWidget {
+import '../model/transaction_model.dart';
+import '../providers/isar_providers.dart';
+
+class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
   @override
-  State<ReportsScreen> createState() => _ReportsScreenState();
+  ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends State<ReportsScreen> {
-  int _selectedView = 0; // 1:  by category, 0:by monthly
-  int _categoryType = 0; // 0: income, 1: outcome
-  final String _selectedMonth = 'ديسمبر 2023';
+class _ReportsScreenState extends ConsumerState<ReportsScreen> {
+  int _selectedView = 0; // 0: by category, 1: by monthly comparison
+  int _categoryType = 0; // 0: expenses, 1: income
+  DateTime _selectedDate = DateTime.now(); // الشهر المختار حالياً
 
-  // ---  outcome ---
-  final List<Map<String, dynamic>> _expenseCategories = [
-    {
-      'title': 'الطعام',
-      'percent': '40%',
-      'value': 40.0,
-      'amount': '1,640 ر.س',
-      'icon': HeroIcons.cake,
-      'color': AppColors.success,
-    },
-    {
-      'title': 'السكن',
-      'percent': '30%',
-      'value': 30.0,
-      'amount': '1,230 ر.س',
-      'icon': HeroIcons.home,
-      'color': AppColors.primary,
-    },
-    {
-      'title': 'نقل',
-      'percent': '15%',
-      'value': 15.0,
-      'amount': '615 ر.س',
-      'icon': HeroIcons.truck,
-      'color': AppColors.accent,
-    },
-    {
-      'title': 'أخرى',
-      'percent': '15%',
-      'value': 15.0,
-      'amount': '615 ر.س',
-      'icon': HeroIcons.ellipsisHorizontal,
-      'color': AppColors.textLight,
-    },
-  ];
-
-  // ---  icome data ---
-  final List<Map<String, dynamic>> _incomeCategories = [
-    {
-      'title': 'الراتب',
-      'percent': '60%',
-      'value': 60.0,
-      'amount': '4,080 ر.س',
-      'icon': HeroIcons.banknotes,
-      'color': AppColors.success,
-    },
-    {
-      'title': 'عمل حر',
-      'percent': '25%',
-      'value': 25.0,
-      'amount': '1,700 ر.س',
-      'icon': HeroIcons.briefcase,
-      'color': AppColors.primary,
-    },
-    {
-      'title': 'استثمارات',
-      'percent': '10%',
-      'value': 10.0,
-      'amount': '680 ر.س',
-      'icon': HeroIcons.chartBar,
-      'color': AppColors.accent,
-    },
-    {
-      'title': 'أخرى',
-      'percent': '5%',
-      'value': 5.0,
-      'amount': '340 ر.س',
-      'icon': HeroIcons.ellipsisHorizontal,
-      'color': AppColors.textLight,
-    },
-  ];
+  // قائمة ألوان افتراضية للفئات
 
   @override
   Widget build(BuildContext context) {
+    final transactionsAsync = ref.watch(transactionsStreamProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            children: [
-              //  Month Selector
-              _buildMonthPicker(),
-              const SizedBox(height: AppSpacing.md),
+        child: transactionsAsync.when(
+          data: (allTransactions) {
+            // 1. تصفية معاملات الشهر المحدد
+            final currentMonthTx = allTransactions.where((tx) {
+              return tx.date.year == _selectedDate.year &&
+                  tx.date.month == _selectedDate.month;
+            }).toList();
 
-              //  Toggle View Bar
-              _buildViewToggle(),
-              const SizedBox(height: AppSpacing.md),
+            // 2. معالجة وتجميع بيانات الفئات للشهر المحدد
+            final categoryData = _processCategoryData(currentMonthTx);
 
-              if (_selectedView == 0) ...[
-                _buildCategoryTypeToggle(),
-                const SizedBox(height: AppSpacing.lg),
-              ] else ...[
-                const SizedBox(height: AppSpacing.sm),
-              ],
+            // 3. معالجة بيانات المقارنة الشهرية (لآخر 3 أشهر)
+            final monthlyComparisonData = _processMonthlyData(allTransactions);
 
-              //
-              _selectedView == 0
-                  ? _buildCategoryPieChartCard()
-                  : _buildMonthlyBarChartCard(),
+            return SingleChildScrollView(
+              padding: AppSpacing.screenPadding,
+              child: Column(
+                children: [
+                  // محدد الشهر
+                  _buildMonthPicker(),
+                  const SizedBox(height: AppSpacing.md),
 
-              const SizedBox(height: AppSpacing.xl),
+                  // شريط تبديل طريقة العرض
+                  _buildViewToggle(),
+                  const SizedBox(height: AppSpacing.md),
 
-              // category Breakdown
-              _buildCategoryBreakdownList(),
-            ],
-          ),
+                  if (_selectedView == 0) ...[
+                    _buildCategoryTypeToggle(),
+                    const SizedBox(height: AppSpacing.lg),
+                  ] else ...[
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+
+                  // الرسم البياني (دائري أو أعمدة)
+                  _selectedView == 0
+                      ? _buildCategoryPieChartCard(categoryData)
+                      : _buildMonthlyBarChartCard(monthlyComparisonData),
+
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // تفاصيل الفئات
+                  if (_selectedView == 0)
+                    _buildCategoryBreakdownList(categoryData),
+                ],
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) =>
+              Center(child: Text('حدث خطأ أثناء تحميل البيانات: $err')),
         ),
       ),
     );
   }
 
-  // --- App bar  ---
+  // --- تجميع بيانات الفئات حسب نوع الحركة (إيراد/مصروف) ---
+  List<Map<String, dynamic>> _processCategoryData(
+    List<TransactionModel> monthTx,
+  ) {
+    final isExpense = _categoryType == 0;
+
+    final filteredTx = monthTx.where((tx) {
+      return isExpense ? tx.amount < 0 : tx.amount > 0;
+    }).toList();
+
+    double totalAmount = 0;
+    final Map<String, Map<String, dynamic>> grouped = {};
+
+    for (var tx in filteredTx) {
+      final cat = tx.category.value;
+      final catName = cat?.name ?? 'بدون فئة';
+      final iconName = cat?.iconName;
+      final amount = tx.amount.abs();
+      totalAmount += amount;
+
+      if (grouped.containsKey(catName)) {
+        grouped[catName]!['amount'] += amount;
+      } else {
+        grouped[catName] = {
+          'title': catName,
+          'amount': amount,
+          'iconName': iconName,
+        };
+      }
+    }
+
+    return grouped.values.map((item) {
+      final double amount = item['amount'];
+      final double percent = totalAmount > 0 ? (amount / totalAmount) * 100 : 0;
+      final String title = item['title'];
+
+      return {
+        'title': title,
+        'percent': '${percent.toStringAsFixed(1)}%',
+        'value': percent,
+        'amountValue': amount,
+        'amount': '${amount.toStringAsFixed(2)} ر.س',
+        'icon': _getHeroIconData(item['iconName']),
+        'color': _getCategoryColor(title), // استخدام اللون المميز للفئة
+      };
+    }).toList();
+  }
+
+  // --- تجميع البيانات الشهرية للمقارنة (الشهر المختار والشهران السابقان) ---
+  List<Map<String, dynamic>> _processMonthlyData(List<TransactionModel> allTx) {
+    List<Map<String, dynamic>> monthsData = [];
+
+    for (int i = 2; i >= 0; i--) {
+      final targetDate = DateTime(
+        _selectedDate.year,
+        _selectedDate.month - i,
+        1,
+      );
+      final monthTx = allTx.where(
+        (tx) =>
+            tx.date.year == targetDate.year &&
+            tx.date.month == targetDate.month,
+      );
+
+      double income = 0;
+      double expense = 0;
+
+      for (var tx in monthTx) {
+        if (tx.amount > 0) {
+          income += tx.amount;
+        } else {
+          expense += tx.amount.abs();
+        }
+      }
+
+      monthsData.add({
+        'monthName': DateFormat('MMMM', 'ar').format(targetDate),
+        'income': income,
+        'expense': expense,
+      });
+    }
+
+    return monthsData;
+  }
+
+  // --- AppBar ---
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -151,8 +193,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // ---chose a month---
+  // --- محدد الشهر ---
   Widget _buildMonthPicker() {
+    final formattedMonth = DateFormat('MMMM yyyy', 'ar').format(_selectedDate);
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -168,19 +212,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           IconButton(
             icon: const HeroIcon(HeroIcons.chevronRight, size: 20),
-            onPressed: () {},
+            onPressed: () {
+              setState(() {
+                _selectedDate = DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month - 1,
+                );
+              });
+            },
           ),
-          Text(_selectedMonth, style: AppTextStyles.h3),
+          Text(formattedMonth, style: AppTextStyles.h3),
           IconButton(
             icon: const HeroIcon(HeroIcons.chevronLeft, size: 20),
-            onPressed: () {},
+            onPressed: () {
+              setState(() {
+                _selectedDate = DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month + 1,
+                );
+              });
+            },
           ),
         ],
       ),
     );
   }
 
-  // --- main toggle bar---
+  // --- شريط التبديل الرئيسي ---
   Widget _buildViewToggle() {
     return Container(
       padding: const EdgeInsets.all(4),
@@ -209,7 +267,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // ---CategoryTypeToggle bar---
+  // --- شريط تبديل نوع الفئة (إيراد / مصروف) ---
   Widget _buildCategoryTypeToggle() {
     return Row(
       children: [
@@ -299,11 +357,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  //  destrepioted category based type piechart
-  Widget _buildCategoryPieChartCard() {
-    final currentData = _categoryType == 0
-        ? _expenseCategories
-        : _incomeCategories;
+  // --- الرسم البياني الدائري للفئات ---
+  Widget _buildCategoryPieChartCard(List<Map<String, dynamic>> categories) {
     final title = _categoryType == 0
         ? 'توزيع المصاريف حسب الفئة'
         : 'توزيع الإيرادات حسب الفئة';
@@ -315,35 +370,88 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           Text(title, style: AppTextStyles.h2),
           const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            height: 200,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 3,
-                centerSpaceRadius: 50,
-                sections: currentData.map((item) {
-                  return PieChartSectionData(
-                    color: item['color'] as Color,
-                    value: (item['value'] as num).toDouble(),
-                    title: '${item['title']} ${item['percent']}',
-                    radius: 45,
-                    titleStyle: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+          categories.isEmpty
+              ? const SizedBox(
+                  height: 180,
+                  child: Center(
+                    child: Text(
+                      'لا توجد بيانات لهذا الشهر',
+                      style: AppTextStyles.bodySmall,
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
+                  ),
+                )
+              : Column(
+                  children: [
+                    SizedBox(
+                      height: 180,
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          sections: categories.map((item) {
+                            final double value = (item['value'] as num)
+                                .toDouble();
+                            final bool showTitle =
+                                value >=
+                                8; // إظهار النص داخل الدائرة فقط للنسب 8% فأكثر لضمان الوضوح
+
+                            return PieChartSectionData(
+                              color: item['color'] as Color,
+                              value: value,
+                              title: showTitle
+                                  ? '${value.toStringAsFixed(0)}%'
+                                  : '',
+                              radius: 42,
+                              titleStyle: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // دليل الألوان (Legend) لعرض اسم الفئة والنسبة بشكل واضح تحت الرسم البياني
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: categories.map((item) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: item['color'] as Color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${item['title']} (${item['percent']})',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
         ],
       ),
     );
   }
 
-  // compare monthly barchart
-  Widget _buildMonthlyBarChartCard() {
+  // --- رسم الأعمدة البياني للمقارنة الشهرية ---
+  Widget _buildMonthlyBarChartCard(List<Map<String, dynamic>> monthlyData) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: AppDecorations.cardDecoration,
@@ -365,23 +473,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: BarChart(
               BarChartData(
                 borderData: FlBorderData(show: false),
-                gridData: FlGridData(show: false),
+                gridData: const FlGridData(show: false),
                 titlesData: FlTitlesData(
-                  topTitles: AxisTitles(
+                  topTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  rightTitles: AxisTitles(
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        const months = ['أكتوبر', 'نوفمبر', 'ديسمبر'];
-                        if (value.toInt() < months.length) {
-                          return Text(
-                            months[value.toInt()],
-                            style: AppTextStyles.bodySmall,
+                        int index = value.toInt();
+                        if (index >= 0 && index < monthlyData.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6.0),
+                            child: Text(
+                              monthlyData[index]['monthName'],
+                              style: AppTextStyles.bodySmall,
+                            ),
                           );
                         }
                         return const Text('');
@@ -389,11 +503,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                   ),
                 ),
-                barGroups: [
-                  _makeGroupData(0, 5000, 3200),
-                  _makeGroupData(1, 6200, 4100),
-                  _makeGroupData(2, 6800, 4100),
-                ],
+                barGroups: List.generate(monthlyData.length, (index) {
+                  final data = monthlyData[index];
+                  return _makeGroupData(
+                    index,
+                    (data['income'] as num).toDouble(),
+                    (data['expense'] as num).toDouble(),
+                  );
+                }),
               ),
             ),
           ),
@@ -436,11 +553,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- قائمة التفاصيل والنسب لكل فئة (ديناميكية حسب المصاريف/الإيرادات) ---
-  Widget _buildCategoryBreakdownList() {
-    final categories = _categoryType == 0
-        ? _expenseCategories
-        : _incomeCategories;
+  // --- قائمة تفاصيل الفئات والنسب ---
+  Widget _buildCategoryBreakdownList(List<Map<String, dynamic>> categories) {
     final listTitle = _categoryType == 0
         ? 'تفاصيل المصاريف'
         : 'تفاصيل الإيرادات';
@@ -450,55 +564,124 @@ class _ReportsScreenState extends State<ReportsScreen> {
       children: [
         Text(listTitle, style: AppTextStyles.h2),
         const SizedBox(height: AppSpacing.sm),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: categories.length,
-          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-          itemBuilder: (context, index) {
-            final cat = categories[index];
-            return Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: AppDecorations.cardDecoration,
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: (cat['color'] as Color).withValues(alpha: .15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: HeroIcon(
-                        cat['icon'] as HeroIcons,
-                        color: cat['color'] as Color,
-                      ),
-                    ),
+        categories.isEmpty
+            ? Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                width: double.infinity,
+                decoration: AppDecorations.cardDecoration,
+                child: const Center(
+                  child: Text(
+                    'لا توجد تفاصيل متاحة',
+                    style: AppTextStyles.bodySmall,
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: categories.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (context, index) {
+                  final cat = categories[index];
+                  return Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: AppDecorations.cardDecoration,
+                    child: Row(
                       children: [
-                        Text(cat['title'] as String, style: AppTextStyles.h3),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: (cat['color'] as Color).withValues(
+                              alpha: .15,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: HeroIcon(
+                              cat['icon'] as HeroIcons,
+                              color: cat['color'] as Color,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                cat['title'] as String,
+                                style: AppTextStyles.h3,
+                              ),
+                              Text(
+                                'نسبة التحصيل/الاستهلاك: ${cat['percent']}',
+                                style: AppTextStyles.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
                         Text(
-                          'نسبة التحصيل/الاستهلاك: ${cat['percent']}',
-                          style: AppTextStyles.bodySmall,
+                          cat['amount'] as String,
+                          style: AppTextStyles.amountMedium,
                         ),
                       ],
                     ),
-                  ),
-                  Text(
-                    cat['amount'] as String,
-                    style: AppTextStyles.amountMedium,
-                  ),
-                ],
+                  );
+                },
               ),
-            );
-          },
-        ),
       ],
     );
   }
+
+  // --- أيقونات الفئات ---
+  HeroIcons _getHeroIconData(String? iconName) {
+    switch (iconName) {
+      case 'shoppingCart':
+        return HeroIcons.shoppingCart;
+      case 'academicCap':
+        return HeroIcons.academicCap;
+      case 'heart':
+        return HeroIcons.heart;
+      case 'film':
+        return HeroIcons.film;
+      case 'wrench':
+        return HeroIcons.wrench;
+      case 'banknotes':
+        return HeroIcons.banknotes;
+      case 'creditCard':
+        return HeroIcons.creditCard;
+      case 'briefcase':
+        return HeroIcons.briefcase;
+      case 'bolt':
+        return HeroIcons.bolt;
+      case 'shoppingBag':
+        return HeroIcons.shoppingBag;
+      case 'home':
+        return HeroIcons.home;
+      case 'cake':
+        return HeroIcons.cake;
+      case 'truck':
+        return HeroIcons.truck;
+      default:
+        return HeroIcons.tag;
+    }
+  }
+}
+
+// دالة لتوليد لون ثابت ومميز بناءً على اسم الفئة
+Color _getCategoryColor(String categoryName) {
+  final List<Color> palette = [
+    const Color(0xFF10B981), // Emerald (مثلاً للراتب)
+    const Color(0xFF3B82F6), // Blue (للعمل الحر)
+    const Color(0xFFF59E0B), // Amber (استثمارات)
+    const Color(0xFFEC4899), // Pink
+    const Color(0xFF8B5CF6), // Purple
+    const Color(0xFF06B6D4), // Cyan
+    const Color(0xFFEF4444), // Red
+    const Color(0xFF64748B), // Slate (أخرى)
+  ];
+
+  final int hash = categoryName.hashCode.abs();
+  return palette[hash % palette.length];
 }

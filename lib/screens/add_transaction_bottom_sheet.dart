@@ -345,6 +345,32 @@ class _AddTransactionBottomSheetState
       return;
     }
 
+    // ----------------------- [ التحقق من الرصيد المتاح ] -----------------------
+    if (isExpense) {
+      // جلب جميع الحركات السابقة لحساب الرصيد الحقيقي المتاح
+      final allTransactions = ref.read(transactionsStreamProvider).value ?? [];
+
+      double currentBalance = 0;
+      for (var tx in allTransactions) {
+        currentBalance += tx.amount; // يجمع الإيرادات (+) والمصاريف (-)
+      }
+
+      // إذا كان المصروف المطلوب أكبر من الرصيد المالي الحالي
+      if (rawAmount > currentBalance) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'عذراً، رصيدك الحالي (${currentBalance.toStringAsFixed(2)} ر.س) لا يكفي لإتمام هذه العملية!',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return; // إلغاء العملية وعدم الحفظ
+      }
+    }
+    // --------------------------------------------------------------------------
+
     final finalAmount = isExpense ? -rawAmount : rawAmount;
 
     // تنفيذ حفظ المعاملة في Isar
@@ -361,7 +387,6 @@ class _AddTransactionBottomSheetState
         );
 
     if (mounted) {
-      // 1. إظهار رسالة التأكيد
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تمت إضافة المعاملة بنجاح!'),
@@ -370,7 +395,6 @@ class _AddTransactionBottomSheetState
         ),
       );
 
-      // 2. إغلاق الـ BottomSheet
       Navigator.pop(context);
     }
   }

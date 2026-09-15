@@ -27,18 +27,34 @@ class SummaryCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTextStyles.bodySmall),
-              const SizedBox(height: 4),
-              Text(amount, style: AppTextStyles.amountMedium),
-            ],
+          // إحاطة النصوص بـ Expanded يمنع مشكلة Overflow تماماً
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                // استخدام FittedBox لتقليص حجم المبالغ الكبيرة تلقائياً لتناسب المساحة
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(amount, style: AppTextStyles.amountMedium),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: AppSpacing.xs),
+          // الأيقونة الدائرية
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: HeroIcon(icon, color: color, size: 20),
