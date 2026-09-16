@@ -28,6 +28,7 @@ class _AddTransactionBottomSheetState
   bool isExpense = true;
   CategoriesModel? selectedCategory;
   DateTime selectedDate = DateTime.now();
+  String? selectedCurrency; // العملة المختارة حالياً لهذه المعاملة
 
   final TextEditingController amountController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
@@ -44,8 +45,8 @@ class _AddTransactionBottomSheetState
     final l10n = AppLocalizations.of(context)!;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    // جلب الفئات من Isar عبر StreamProvider
     final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final currencyAsync = ref.watch(currencySettingsStreamProvider);
 
     return Container(
       padding: EdgeInsets.only(
@@ -119,28 +120,82 @@ class _AddTransactionBottomSheetState
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // حقل المبلغ
+            // حقل المبلغ واختيار العملة
             Text(l10n.amount, style: AppTextStyles.bodySmall),
             const SizedBox(height: AppSpacing.xs),
-            TextField(
-              controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              style: AppTextStyles.h1,
-              textAlign: TextAlign.center,
-              decoration: InputDecoration(
-                hintText: l10n.amountHint,
-                hintStyle: AppTextStyles.h1.copyWith(
-                  color: AppColors.textLight,
-                ),
-                filled: true,
-                fillColor: AppColors.background,
-                border: OutlineInputBorder(
-                  borderRadius: AppSpacing.borderRadiusMd,
-                  borderSide: BorderSide.none,
-                ),
-              ),
+            currencyAsync.when(
+              data: (currencySettings) {
+                // إعداد العملة الافتراضية إذا لم تحدد بعد
+                selectedCurrency ??= currencySettings.baseCurrencyCode;
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: AppTextStyles.h1,
+                        textAlign: TextAlign.center,
+                        decoration: InputDecoration(
+                          hintText: l10n.amountHint,
+                          hintStyle: AppTextStyles.h1.copyWith(
+                            color: AppColors.textLight,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          border: OutlineInputBorder(
+                            borderRadius: AppSpacing.borderRadiusMd,
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    // زر اختيار العملة
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: AppSpacing.borderRadiusMd,
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedCurrency,
+                          items: [
+                            DropdownMenuItem(
+                              value: currencySettings.baseCurrencyCode,
+                              child: Text(
+                                currencySettings.baseCurrencyCode,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: currencySettings.secondaryCurrencyCode,
+                              child: Text(
+                                currencySettings.secondaryCurrencyCode,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => selectedCurrency = val);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const SizedBox(),
             ),
             const SizedBox(height: AppSpacing.lg),
 
@@ -343,20 +398,42 @@ class _AddTransactionBottomSheetState
       return;
     }
 
+    // جلب إعدادات العملة الحالية
+    final currencySettings = ref.read(currencySettingsStreamProvider).value;
+    final baseCurrency = currencySettings?.baseCurrencyCode ?? 'SAR';
+    final secondaryCurrency = currencySettings?.secondaryCurrencyCode ?? 'USD';
+    final rate = currencySettings?.secondaryExchangeRate ?? 1.0;
+
+    final usedCurrency = selectedCurrency ?? baseCurrency;
+
+    // تحديد سعر الصرف للعملة المدخلة
+    double exchangeRate = 1.0;
+    if (usedCurrency == secondaryCurrency) {
+      exchangeRate = rate;
+    }
+
+    // حساب المبلغ الأساسي (سواء كان إيجابياً أو سلباً)
+    final inputAmount = isExpense ? -rawAmount : rawAmount;
+    final calculatedBaseAmount = inputAmount * exchangeRate;
+
     // ----------------------- [ التحقق من الرصيد المتاح ] -----------------------
     if (isExpense) {
       final allTransactions = ref.read(transactionsStreamProvider).value ?? [];
 
-      double currentBalance = 0;
+      // حساب إجمالي الرصيد المتاح بالعملة الأساسية
+      double currentBaseBalance = 0;
       for (var tx in allTransactions) {
-        currentBalance += tx.amount;
+        currentBaseBalance += tx.baseAmount;
       }
 
-      if (rawAmount > currentBalance) {
+      // مقارنة المبلغ المطلوب خصمه بالعملة الأساسية
+      if (calculatedBaseAmount.abs() > currentBaseBalance) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              l10n.insufficientBalanceError(currentBalance.toStringAsFixed(2)),
+              l10n.insufficientBalanceError(
+                currentBaseBalance.toStringAsFixed(2),
+              ),
             ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
@@ -367,14 +444,14 @@ class _AddTransactionBottomSheetState
     }
     // --------------------------------------------------------------------------
 
-    final finalAmount = isExpense ? -rawAmount : rawAmount;
-
     await ref
         .read(transactionNotifierProvider.notifier)
         .addTransaction(
-          amount: finalAmount,
+          amount: inputAmount,
           date: selectedDate,
-          currencyCode: 'SAR',
+          currencyCode: usedCurrency,
+          exchangeRate: exchangeRate,
+          baseAmount: calculatedBaseAmount,
           category: selectedCategory!,
           note: noteController.text.trim().isEmpty
               ? null

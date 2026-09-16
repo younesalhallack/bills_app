@@ -91,12 +91,13 @@
 "pleaseEnterAmount": "Please enter an amount",
 "pleaseEnterValidAmount": "Please enter a valid amount",
 "pleaseSelectCategory": "Please select a category",
-"insufficientBalanceError": "Sorry, your current balance ({balance} SAR) is not enough to complete this operation!",
+"insufficientBalanceError": "Sorry, your current balance ({balance} SYP) is not enough to complete this operation!",
 "transactionAddedSuccess": "Transaction added successfully!",
 "addNewCategory": "Add New Category",
 "categoryNameHint": "Category name (e.g., Gifts, Education)...",
 "chooseIcon": "Choose Icon:",
 "cancel": "Cancel",
 "add": "Add",
-"errorPrefix": "Error"
+"errorPrefix": "Error",
+"baseCurrency": "Base Currency"
 }

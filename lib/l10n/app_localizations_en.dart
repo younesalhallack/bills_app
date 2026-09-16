@@ -286,7 +286,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String insufficientBalanceError(Object balance) {
-    return 'Sorry, your current balance ($balance SAR) is not enough to complete this operation!';
+    return 'Sorry, your current balance ($balance SYP) is not enough to complete this operation!';
   }
 
   @override

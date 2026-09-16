@@ -10,7 +10,9 @@ class TransactionModel {
 
   late double amount; // قيمة المبلغ
   late DateTime date; // تاريخ المعاملة
-  late String currencyCode; // كود العملة (مثال: 'USD', 'SAR', 'IQD')
+  late String currencyCode;
+  double exchangeRate = 1.0;
+  double baseAmount = 0.0;
   String? note; // ملاحظات أو وصف اختياري
 
   // علاقة ربط المعاملة بالفئة الخاصة بها

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:bills_app/core/constants/app_constants.dart';
 import '../providers/settings_provider.dart';
+import '../providers/isar_providers.dart';
 
 import 'edit_profile_screen.dart';
 import 'currency_selection_screen.dart';
@@ -63,6 +64,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settingsAsync = ref.watch(settingsStreamProvider);
+    final currencySettingsAsync = ref.watch(currencySettingsStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -75,6 +77,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: settingsAsync.when(
         data: (settings) {
           final isArabic = settings.languageCode == 'ar';
+
+          // جلب تفاصيل العملة الأساسية الحالية ديناميكياً
+          final baseCurrencyText = currencySettingsAsync.when(
+            data: (currencySettings) {
+              if (currencySettings == null) return '';
+              final name = l10n.baseCurrency;
+              //final symbol = currencySettings.baseCurrencySymbol;
+              final code = currencySettings.baseCurrencyCode;
+
+              return '$name ( $code)';
+            },
+            loading: () => '...',
+            error: (_, __) => '',
+          );
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -137,12 +153,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _buildSettingTile(
                       icon: HeroIcons.currencyDollar,
                       title: l10n.baseCurrency,
-                      subtitle: 'ريال سعودي (ر.س)',
+                      subtitle: baseCurrencyText.isNotEmpty
+                          ? baseCurrencyText
+                          : null,
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const CurrencySelectionScreen(),
+                            builder: (_) => const CurrencySettingsScreen(),
                           ),
                         );
                       },

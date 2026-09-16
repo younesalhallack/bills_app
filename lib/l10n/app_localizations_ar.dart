@@ -285,7 +285,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String insufficientBalanceError(Object balance) {
-    return 'عذراً، رصيدك الحالي ($balance ر.س) لا يكفي لإتمام هذه العملية!';
+    return 'عذراً، رصيدك الحالي ($balance ل.س) لا يكفي لإتمام هذه العملية!';
   }
 
   @override

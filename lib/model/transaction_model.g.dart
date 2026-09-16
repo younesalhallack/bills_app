@@ -18,13 +18,23 @@ const TransactionModelSchema = CollectionSchema(
   id: -8282894918172491246,
   properties: {
     r'amount': PropertySchema(id: 0, name: r'amount', type: IsarType.double),
-    r'currencyCode': PropertySchema(
+    r'baseAmount': PropertySchema(
       id: 1,
+      name: r'baseAmount',
+      type: IsarType.double,
+    ),
+    r'currencyCode': PropertySchema(
+      id: 2,
       name: r'currencyCode',
       type: IsarType.string,
     ),
-    r'date': PropertySchema(id: 2, name: r'date', type: IsarType.dateTime),
-    r'note': PropertySchema(id: 3, name: r'note', type: IsarType.string),
+    r'date': PropertySchema(id: 3, name: r'date', type: IsarType.dateTime),
+    r'exchangeRate': PropertySchema(
+      id: 4,
+      name: r'exchangeRate',
+      type: IsarType.double,
+    ),
+    r'note': PropertySchema(id: 5, name: r'note', type: IsarType.string),
   },
 
   estimateSize: _transactionModelEstimateSize,
@@ -72,9 +82,11 @@ void _transactionModelSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeDouble(offsets[0], object.amount);
-  writer.writeString(offsets[1], object.currencyCode);
-  writer.writeDateTime(offsets[2], object.date);
-  writer.writeString(offsets[3], object.note);
+  writer.writeDouble(offsets[1], object.baseAmount);
+  writer.writeString(offsets[2], object.currencyCode);
+  writer.writeDateTime(offsets[3], object.date);
+  writer.writeDouble(offsets[4], object.exchangeRate);
+  writer.writeString(offsets[5], object.note);
 }
 
 TransactionModel _transactionModelDeserialize(
@@ -85,10 +97,12 @@ TransactionModel _transactionModelDeserialize(
 ) {
   final object = TransactionModel();
   object.amount = reader.readDouble(offsets[0]);
-  object.currencyCode = reader.readString(offsets[1]);
-  object.date = reader.readDateTime(offsets[2]);
+  object.baseAmount = reader.readDouble(offsets[1]);
+  object.currencyCode = reader.readString(offsets[2]);
+  object.date = reader.readDateTime(offsets[3]);
+  object.exchangeRate = reader.readDouble(offsets[4]);
   object.id = id;
-  object.note = reader.readStringOrNull(offsets[3]);
+  object.note = reader.readStringOrNull(offsets[5]);
   return object;
 }
 
@@ -102,10 +116,14 @@ P _transactionModelDeserializeProp<P>(
     case 0:
       return (reader.readDouble(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 2:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 3:
+      return (reader.readDateTime(offset)) as P;
+    case 4:
+      return (reader.readDouble(offset)) as P;
+    case 5:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -279,6 +297,81 @@ extension TransactionModelQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'amount',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  baseAmountEqualTo(double value, {double epsilon = Query.epsilon}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'baseAmount',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  baseAmountGreaterThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'baseAmount',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  baseAmountLessThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'baseAmount',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  baseAmountBetween(
+    double lower,
+    double upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'baseAmount',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -481,6 +574,81 @@ extension TransactionModelQueryFilter
           includeLower: includeLower,
           upper: upper,
           includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  exchangeRateEqualTo(double value, {double epsilon = Query.epsilon}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'exchangeRate',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  exchangeRateGreaterThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'exchangeRate',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  exchangeRateLessThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'exchangeRate',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterFilterCondition>
+  exchangeRateBetween(
+    double lower,
+    double upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'exchangeRate',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+
+          epsilon: epsilon,
         ),
       );
     });
@@ -738,6 +906,20 @@ extension TransactionModelQuerySortBy
   }
 
   QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  sortByBaseAmount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'baseAmount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  sortByBaseAmountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'baseAmount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
   sortByCurrencyCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currencyCode', Sort.asc);
@@ -761,6 +943,20 @@ extension TransactionModelQuerySortBy
   sortByDateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'date', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  sortByExchangeRate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'exchangeRate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  sortByExchangeRateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'exchangeRate', Sort.desc);
     });
   }
 
@@ -795,6 +991,20 @@ extension TransactionModelQuerySortThenBy
   }
 
   QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  thenByBaseAmount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'baseAmount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  thenByBaseAmountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'baseAmount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
   thenByCurrencyCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currencyCode', Sort.asc);
@@ -818,6 +1028,20 @@ extension TransactionModelQuerySortThenBy
   thenByDateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'date', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  thenByExchangeRate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'exchangeRate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QAfterSortBy>
+  thenByExchangeRateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'exchangeRate', Sort.desc);
     });
   }
 
@@ -858,6 +1082,13 @@ extension TransactionModelQueryWhereDistinct
   }
 
   QueryBuilder<TransactionModel, TransactionModel, QDistinct>
+  distinctByBaseAmount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'baseAmount');
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QDistinct>
   distinctByCurrencyCode({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'currencyCode', caseSensitive: caseSensitive);
@@ -867,6 +1098,13 @@ extension TransactionModelQueryWhereDistinct
   QueryBuilder<TransactionModel, TransactionModel, QDistinct> distinctByDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'date');
+    });
+  }
+
+  QueryBuilder<TransactionModel, TransactionModel, QDistinct>
+  distinctByExchangeRate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'exchangeRate');
     });
   }
 
@@ -893,6 +1131,13 @@ extension TransactionModelQueryProperty
     });
   }
 
+  QueryBuilder<TransactionModel, double, QQueryOperations>
+  baseAmountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'baseAmount');
+    });
+  }
+
   QueryBuilder<TransactionModel, String, QQueryOperations>
   currencyCodeProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -903,6 +1148,13 @@ extension TransactionModelQueryProperty
   QueryBuilder<TransactionModel, DateTime, QQueryOperations> dateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'date');
+    });
+  }
+
+  QueryBuilder<TransactionModel, double, QQueryOperations>
+  exchangeRateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'exchangeRate');
     });
   }
 

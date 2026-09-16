@@ -641,7 +641,7 @@ abstract class AppLocalizations {
   /// No description provided for @insufficientBalanceError.
   ///
   /// In en, this message translates to:
-  /// **'Sorry, your current balance ({balance} SAR) is not enough to complete this operation!'**
+  /// **'Sorry, your current balance ({balance} SYP) is not enough to complete this operation!'**
   String insufficientBalanceError(Object balance);
 
   /// No description provided for @transactionAddedSuccess.

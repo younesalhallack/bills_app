@@ -1,4 +1,5 @@
 import 'package:bills_app/model/app_settings_model.dart';
+import 'package:bills_app/model/currency_settings_model.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -14,7 +15,12 @@ class IsarService {
 
     if (Isar.instanceNames.isEmpty) {
       _isarInstance = await Isar.open(
-        [CategoriesModelSchema, TransactionModelSchema, AppSettingsModelSchema],
+        [
+          CategoriesModelSchema,
+          TransactionModelSchema,
+          AppSettingsModelSchema,
+          CurrencySettingsModelSchema,
+        ],
         directory: dir.path,
         inspector: true, // يتيح لك معاينة البيانات أثتاء التطوير
       );
@@ -59,5 +65,16 @@ class IsarService {
         await _isarInstance.categoriesModels.putAll(defaultCategories);
       });
     }
+  }
+
+  double calculateTotalBalance(List<TransactionModel> transactions) {
+    return transactions.fold(0.0, (sum, item) => sum + item.baseAmount);
+  }
+
+  // حساب إجمالي المصروفات بالعملة الأساسية
+  double calculateTotalExpenses(List<TransactionModel> transactions) {
+    return transactions
+        .where((item) => item.baseAmount < 0)
+        .fold(0.0, (sum, item) => sum + item.baseAmount.abs());
   }
 }

@@ -89,7 +89,7 @@
 "pleaseEnterAmount": "الرجاء إدخال المبلغ",
 "pleaseEnterValidAmount": "الرجاء إدخال مبلغ صحيح",
 "pleaseSelectCategory": "الرجاء اختيار فئة",
-"insufficientBalanceError": "عذراً، رصيدك الحالي ({balance} ر.س) لا يكفي لإتمام هذه العملية!",
+"insufficientBalanceError": "عذراً، رصيدك الحالي ({balance} ل.س) لا يكفي لإتمام هذه العملية!",
 "transactionAddedSuccess": "تمت إضافة المعاملة بنجاح!",
 "addNewCategory": "إضافة فئة جديدة",
 "expense": "مصروف",
@@ -98,5 +98,6 @@
 "chooseIcon": "اختر أيقونة:",
 "cancel": "إلغاء",
 "add": "إضافة",
-"errorPrefix": "خطأ"
+"errorPrefix": "خطأ",
+"baseCurrency": "العملة الأساسية"
 }
