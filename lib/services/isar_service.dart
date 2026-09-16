@@ -1,3 +1,4 @@
+import 'package:bills_app/model/app_settings_model.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -13,7 +14,7 @@ class IsarService {
 
     if (Isar.instanceNames.isEmpty) {
       _isarInstance = await Isar.open(
-        [CategoriesModelSchema, TransactionModelSchema],
+        [CategoriesModelSchema, TransactionModelSchema, AppSettingsModelSchema],
         directory: dir.path,
         inspector: true, // يتيح لك معاينة البيانات أثتاء التطوير
       );

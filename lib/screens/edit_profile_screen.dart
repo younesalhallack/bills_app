@@ -1,6 +1,7 @@
+import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
-import 'package:bills_app/core/constants/app_constants.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -18,7 +19,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: ' يونس');
+    _nameController = TextEditingController(text: 'يونس');
     _emailController = TextEditingController(text: 'younes@example.com');
     _phoneController = TextEditingController(text: '+963 00 000 000');
   }
@@ -33,13 +34,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('تعديل الملف الشخصي', style: AppTextStyles.h2),
+        title: Text(l10n.editProfile, style: AppTextStyles.h2),
         leading: IconButton(
           icon: const HeroIcon(
             HeroIcons.chevronRight,
@@ -61,7 +64,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
                         child: const HeroIcon(
                           HeroIcons.user,
                           color: AppColors.primary,
@@ -92,20 +97,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                 // fields
                 _buildTextField(
-                  label: 'الاسم كامل',
+                  label: l10n.fullName,
                   controller: _nameController,
                   icon: HeroIcons.user,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _buildTextField(
-                  label: 'البريد الإلكتروني',
+                  label: l10n.email,
                   controller: _emailController,
                   icon: HeroIcons.envelope,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _buildTextField(
-                  label: 'رقم الهاتف',
+                  label: l10n.phoneNumber,
                   controller: _phoneController,
                   icon: HeroIcons.phone,
                   keyboardType: TextInputType.phone,
@@ -128,9 +133,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         Navigator.pop(context);
                       }
                     },
-                    child: const Text(
-                      'حفظ التغييرات',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.saveChanges,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

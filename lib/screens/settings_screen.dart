@@ -1,6 +1,9 @@
-import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:bills_app/core/constants/app_constants.dart';
+import '../providers/settings_provider.dart';
 
 import 'edit_profile_screen.dart';
 import 'currency_selection_screen.dart';
@@ -8,33 +11,28 @@ import 'language_selection_screen.dart';
 import 'backup_settings_screen.dart';
 import 'security_settings_screen.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notificationsEnabled = true;
-
-  void _showLogoutDialog() {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  void _showLogoutDialog(BuildContext context, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: AppColors.cardBackground,
-        title: const Text('تسجيل الخروج', style: AppTextStyles.h2),
-        content: const Text(
-          'هل أنت تأكد من أنك تريد تسجيل الخروج من التطبيق؟',
-          style: AppTextStyles.bodyMedium,
-        ),
+        title: Text(l10n.logout, style: AppTextStyles.h2),
+        content: Text(l10n.logoutConfirmation, style: AppTextStyles.bodyMedium),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'إلغاء',
-              style: TextStyle(
+            child: Text(
+              l10n.cancel,
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 color: AppColors.textSecondary,
               ),
@@ -49,11 +47,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             onPressed: () {
               Navigator.pop(context);
-              // logout logic
+              // منطق تسجيل الخروج هنا
             },
-            child: const Text(
-              'تسجيل الخروج',
-              style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
+            child: Text(
+              l10n.logout,
+              style: const TextStyle(fontFamily: 'Cairo', color: Colors.white),
             ),
           ),
         ],
@@ -63,163 +61,175 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settingsAsync = ref.watch(settingsStreamProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('الإعدادات', style: AppTextStyles.h1),
+        title: Text(l10n.settingsTitle, style: AppTextStyles.h1),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // profile card
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: AppDecorations.cardDecoration,
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      child: const HeroIcon(
-                        HeroIcons.user,
-                        color: AppColors.primary,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('أحمد محمد', style: AppTextStyles.h2),
-                          Text(
-                            'ahmed@example.com',
-                            style: AppTextStyles.bodySmall,
+      body: settingsAsync.when(
+        data: (settings) {
+          final isArabic = settings.languageCode == 'ar';
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: AppSpacing.screenPadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // بطاقة الملف الشخصي
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: AppDecorations.cardDecoration,
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          child: const HeroIcon(
+                            HeroIcons.user,
+                            color: AppColors.primary,
+                            size: 30,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('أحمد محمد', style: AppTextStyles.h2),
+                              Text(
+                                'ahmed@example.com',
+                                style: AppTextStyles.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const HeroIcon(
+                            HeroIcons.pencilSquare,
+                            color: AppColors.textSecondary,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const EditProfileScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const HeroIcon(
-                        HeroIcons.pencilSquare,
-                        color: AppColors.textSecondary,
-                      ),
-                      onPressed: () {
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // التفضيلات العامة
+                  Text(l10n.generalPreferences, style: AppTextStyles.h3),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  _buildSettingsGroup([
+                    _buildSettingTile(
+                      icon: HeroIcons.currencyDollar,
+                      title: l10n.baseCurrency,
+                      subtitle: 'ريال سعودي (ر.س)',
+                      onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const EditProfileScreen(),
+                            builder: (_) => const CurrencySelectionScreen(),
                           ),
                         );
                       },
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
+                    _buildSettingTile(
+                      icon: HeroIcons.language,
+                      title: l10n.language,
+                      subtitle: isArabic ? l10n.arabic : l10n.english,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LanguageSelectionScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildSwitchTile(
+                      icon: HeroIcons.bell,
+                      title: l10n.notifications,
+                      value: settings.notificationsEnabled,
+                      onChanged: (val) {
+                        final controller = ref.read(settingsControllerProvider);
+                        controller?.toggleNotifications(val);
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: AppSpacing.lg),
 
-              //  account settings
-              const Text('التفضيلات العامة', style: AppTextStyles.h3),
-              const SizedBox(height: AppSpacing.sm),
+                  // الأمان والبيانات
+                  Text(l10n.securityAndData, style: AppTextStyles.h3),
+                  const SizedBox(height: AppSpacing.sm),
 
-              _buildSettingsGroup([
-                _buildSettingTile(
-                  icon: HeroIcons.currencyDollar,
-                  title: 'العملة الأساسية',
-                  subtitle: 'ريال سعودي (ر.س)',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CurrencySelectionScreen(),
+                  _buildSettingsGroup([
+                    _buildSettingTile(
+                      icon: HeroIcons.cloudArrowUp,
+                      title: l10n.backup,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BackupSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildSettingTile(
+                      icon: HeroIcons.lockClosed,
+                      title: l10n.appLock,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SecuritySettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // زر تسجيل الخروج
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: () => _showLogoutDialog(context, l10n),
+                      icon: const HeroIcon(
+                        HeroIcons.arrowLeftStartOnRectangle,
+                        color: AppColors.danger,
                       ),
-                    );
-                  },
-                ),
-                _buildSettingTile(
-                  icon: HeroIcons.language,
-                  title: 'اللغة',
-                  subtitle: 'العربية',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const LanguageSelectionScreen(),
+                      label: Text(
+                        l10n.logout,
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    );
-                  },
-                ),
-                _buildSwitchTile(
-                  icon: HeroIcons.bell,
-                  title: 'التنبيهات والإشعارات',
-                  value: _notificationsEnabled,
-                  onChanged: (val) =>
-                      setState(() => _notificationsEnabled = val),
-                ),
-              ]),
-              const SizedBox(height: AppSpacing.lg),
-
-              //  Data & security
-              const Text('الأمان والبيانات', style: AppTextStyles.h3),
-              const SizedBox(height: AppSpacing.sm),
-
-              _buildSettingsGroup([
-                _buildSettingTile(
-                  icon: HeroIcons.cloudArrowUp,
-                  title: 'النسخ الاحتياطي',
-                  subtitle: 'آخر مزامنة: اليوم 09:00 ص',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const BackupSettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                _buildSettingTile(
-                  icon: HeroIcons.lockClosed,
-                  title: 'قفل التطبيق (بصمة الوجه/الإصبع)',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SecuritySettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ]),
-              const SizedBox(height: AppSpacing.lg),
-
-              //  logout
-              SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  onPressed: _showLogoutDialog,
-                  icon: const HeroIcon(
-                    HeroIcons.arrowLeftStartOnRectangle,
-                    color: AppColors.danger,
-                  ),
-                  label: const Text(
-                    'تسجيل الخروج',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      color: AppColors.danger,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }
@@ -261,7 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return SwitchListTile(
       value: value,
       onChanged: onChanged,
-      activeThumbColor: AppColors.primary,
+      activeColor: AppColors.primary,
       secondary: HeroIcon(icon, color: AppColors.primary),
       title: Text(title, style: AppTextStyles.bodyMedium),
     );

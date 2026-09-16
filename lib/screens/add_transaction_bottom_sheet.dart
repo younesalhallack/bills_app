@@ -1,4 +1,5 @@
 import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:bills_app/model/categories_model.dart';
 import 'package:bills_app/providers/isar_providers.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ class AddTransactionBottomSheet extends ConsumerStatefulWidget {
 class _AddTransactionBottomSheetState
     extends ConsumerState<AddTransactionBottomSheet> {
   bool isExpense = true;
-  CategoriesModel? selectedCategory; // أصبح كائن Category بدلاً من String
+  CategoriesModel? selectedCategory;
   DateTime selectedDate = DateTime.now();
 
   final TextEditingController amountController = TextEditingController();
@@ -40,6 +41,7 @@ class _AddTransactionBottomSheetState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     // جلب الفئات من Isar عبر StreamProvider
@@ -76,8 +78,8 @@ class _AddTransactionBottomSheetState
             ),
             const SizedBox(height: AppSpacing.md),
 
-            const Center(
-              child: Text('إضافة معاملة جديدة', style: AppTextStyles.h2),
+            Center(
+              child: Text(l10n.addNewTransaction, style: AppTextStyles.h2),
             ),
             const SizedBox(height: AppSpacing.lg),
 
@@ -92,25 +94,23 @@ class _AddTransactionBottomSheetState
                 children: [
                   Expanded(
                     child: _buildTypeButton(
-                      title: 'مصروف',
+                      title: l10n.expense,
                       isSelected: isExpense,
                       color: AppColors.danger,
                       onTap: () => setState(() {
                         isExpense = true;
-                        selectedCategory =
-                            null; // إعادة تعيين الفئة عند تغيير النوع
+                        selectedCategory = null;
                       }),
                     ),
                   ),
                   Expanded(
                     child: _buildTypeButton(
-                      title: 'إيراد',
+                      title: l10n.income,
                       isSelected: !isExpense,
                       color: AppColors.success,
                       onTap: () => setState(() {
                         isExpense = false;
-                        selectedCategory =
-                            null; // إعادة تعيين الفئة عند تغيير النوع
+                        selectedCategory = null;
                       }),
                     ),
                   ),
@@ -120,7 +120,7 @@ class _AddTransactionBottomSheetState
             const SizedBox(height: AppSpacing.lg),
 
             // حقل المبلغ
-            const Text('المبلغ', style: AppTextStyles.bodySmall),
+            Text(l10n.amount, style: AppTextStyles.bodySmall),
             const SizedBox(height: AppSpacing.xs),
             TextField(
               controller: amountController,
@@ -130,7 +130,7 @@ class _AddTransactionBottomSheetState
               style: AppTextStyles.h1,
               textAlign: TextAlign.center,
               decoration: InputDecoration(
-                hintText: '0.00 ر.س',
+                hintText: l10n.amountHint,
                 hintStyle: AppTextStyles.h1.copyWith(
                   color: AppColors.textLight,
                 ),
@@ -145,19 +145,17 @@ class _AddTransactionBottomSheetState
             const SizedBox(height: AppSpacing.lg),
 
             // اختيار الفئة
-            const Text('الفئة', style: AppTextStyles.bodySmall),
+            Text(l10n.category, style: AppTextStyles.bodySmall),
             const SizedBox(height: AppSpacing.xs),
             SizedBox(
               height: 45,
               child: categoriesAsync.when(
                 data: (allCategories) {
-                  // تصفية الفئات بناءً على النوع (مصروف / إيراد)
                   final targetType = isExpense ? 'expense' : 'income';
                   final filteredList = allCategories
                       .where((cat) => cat.type == targetType)
                       .toList();
 
-                  // ضبط الفئة المحددة تلقائياً
                   if (filteredList.isNotEmpty) {
                     if (selectedCategory == null ||
                         !filteredList.any(
@@ -181,15 +179,15 @@ class _AddTransactionBottomSheetState
                     itemBuilder: (context, index) {
                       if (index == filteredList.length) {
                         return ActionChip(
-                          onPressed: _showAddCategoryDialog,
+                          onPressed: () => _showAddCategoryDialog(l10n),
                           avatar: const Icon(
                             Icons.add,
                             size: 18,
                             color: AppColors.primary,
                           ),
-                          label: const Text(
-                            'إضافة فئة',
-                            style: TextStyle(
+                          label: Text(
+                            l10n.addCategory,
+                            style: const TextStyle(
                               fontFamily: 'Cairo',
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
@@ -234,7 +232,8 @@ class _AddTransactionBottomSheetState
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text('خطأ: $err')),
+                error: (err, _) =>
+                    Center(child: Text('${l10n.errorPrefix}: $err')),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -277,7 +276,7 @@ class _AddTransactionBottomSheetState
               controller: noteController,
               style: AppTextStyles.bodyMedium,
               decoration: InputDecoration(
-                hintText: 'أضف ملاحظة أو وصف (اختياري)...',
+                hintText: l10n.notesHint,
                 hintStyle: AppTextStyles.bodySmall,
                 filled: true,
                 fillColor: AppColors.background,
@@ -294,7 +293,7 @@ class _AddTransactionBottomSheetState
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _saveTransaction,
+                onPressed: () => _saveTransaction(l10n),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
@@ -302,9 +301,9 @@ class _AddTransactionBottomSheetState
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'إضافة المعاملة',
-                  style: TextStyle(
+                child: Text(
+                  l10n.addTransaction,
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -319,14 +318,13 @@ class _AddTransactionBottomSheetState
     );
   }
 
-  // حفظ المعاملة في Isar
   // حفظ المعاملة
-  Future<void> _saveTransaction() async {
+  Future<void> _saveTransaction(AppLocalizations l10n) async {
     final amountText = amountController.text.trim();
     if (amountText.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('الرجاء إدخال المبلغ')));
+      ).showSnackBar(SnackBar(content: Text(l10n.pleaseEnterAmount)));
       return;
     }
 
@@ -334,46 +332,43 @@ class _AddTransactionBottomSheetState
     if (rawAmount == null || rawAmount <= 0) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('الرجاء إدخال مبلغ صحيح')));
+      ).showSnackBar(SnackBar(content: Text(l10n.pleaseEnterValidAmount)));
       return;
     }
 
     if (selectedCategory == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('الرجاء اختيار فئة')));
+      ).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectCategory)));
       return;
     }
 
     // ----------------------- [ التحقق من الرصيد المتاح ] -----------------------
     if (isExpense) {
-      // جلب جميع الحركات السابقة لحساب الرصيد الحقيقي المتاح
       final allTransactions = ref.read(transactionsStreamProvider).value ?? [];
 
       double currentBalance = 0;
       for (var tx in allTransactions) {
-        currentBalance += tx.amount; // يجمع الإيرادات (+) والمصاريف (-)
+        currentBalance += tx.amount;
       }
 
-      // إذا كان المصروف المطلوب أكبر من الرصيد المالي الحالي
       if (rawAmount > currentBalance) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'عذراً، رصيدك الحالي (${currentBalance.toStringAsFixed(2)} ر.س) لا يكفي لإتمام هذه العملية!',
+              l10n.insufficientBalanceError(currentBalance.toStringAsFixed(2)),
             ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
         );
-        return; // إلغاء العملية وعدم الحفظ
+        return;
       }
     }
     // --------------------------------------------------------------------------
 
     final finalAmount = isExpense ? -rawAmount : rawAmount;
 
-    // تنفيذ حفظ المعاملة في Isar
     await ref
         .read(transactionNotifierProvider.notifier)
         .addTransaction(
@@ -388,10 +383,10 @@ class _AddTransactionBottomSheetState
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تمت إضافة المعاملة بنجاح!'),
+        SnackBar(
+          content: Text(l10n.transactionAddedSuccess),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
 
@@ -440,7 +435,6 @@ class _AddTransactionBottomSheetState
     }
   }
 
-  // تحويل String الأيقونة المخزن في Isar إلى HeroIcons
   HeroIcons _getHeroIconData(String? iconName) {
     switch (iconName) {
       case 'shoppingCart':
@@ -462,7 +456,7 @@ class _AddTransactionBottomSheetState
     }
   }
 
-  void _showAddCategoryDialog() {
+  void _showAddCategoryDialog(AppLocalizations l10n) {
     final categoryNameController = TextEditingController();
     bool newCategoryIsExpense = isExpense;
     HeroIcons selectedIcon = HeroIcons.tag;
@@ -488,8 +482,8 @@ class _AddTransactionBottomSheetState
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
               ),
-              title: const Text(
-                'إضافة فئة جديدة',
+              title: Text(
+                l10n.addNewCategory,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.h2,
               ),
@@ -502,7 +496,7 @@ class _AddTransactionBottomSheetState
                       children: [
                         Expanded(
                           child: ChoiceChip(
-                            label: const Center(child: Text('مصروف')),
+                            label: Center(child: Text(l10n.expense)),
                             selected: newCategoryIsExpense,
                             selectedColor: AppColors.danger,
                             onSelected: (val) {
@@ -519,7 +513,7 @@ class _AddTransactionBottomSheetState
                         const SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: ChoiceChip(
-                            label: const Center(child: Text('إيراد')),
+                            label: Center(child: Text(l10n.income)),
                             selected: !newCategoryIsExpense,
                             selectedColor: AppColors.success,
                             onSelected: (val) {
@@ -543,7 +537,7 @@ class _AddTransactionBottomSheetState
                       controller: categoryNameController,
                       style: AppTextStyles.bodyMedium,
                       decoration: InputDecoration(
-                        hintText: 'اسم الفئة (مثال: هدايا، تعليم)...',
+                        hintText: l10n.categoryNameHint,
                         hintStyle: AppTextStyles.bodySmall,
                         filled: true,
                         fillColor: AppColors.background,
@@ -555,7 +549,7 @@ class _AddTransactionBottomSheetState
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    const Text('اختر أيقونة:', style: AppTextStyles.bodySmall),
+                    Text(l10n.chooseIcon, style: AppTextStyles.bodySmall),
                     const SizedBox(height: AppSpacing.xs),
                     Wrap(
                       spacing: 8,
@@ -590,9 +584,9 @@ class _AddTransactionBottomSheetState
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'إلغاء',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.cancel,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       color: AppColors.textSecondary,
                     ),
@@ -608,7 +602,6 @@ class _AddTransactionBottomSheetState
                   onPressed: () async {
                     final name = categoryNameController.text.trim();
                     if (name.isNotEmpty) {
-                      // حفظ الفئة الجديدة في Isar
                       await ref
                           .read(categoryNotifierProvider.notifier)
                           .addCategory(
@@ -620,9 +613,9 @@ class _AddTransactionBottomSheetState
                       if (context.mounted) Navigator.pop(context);
                     }
                   },
-                  child: const Text(
-                    'إضافة',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.add,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

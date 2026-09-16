@@ -1,9 +1,25 @@
+import 'package:bills_app/model/app_settings_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../model/categories_model.dart';
 import '../model/transaction_model.dart';
 import '../services/isar_service.dart';
+
+final isarProvider = FutureProvider<Isar>((ref) async {
+  final dir = await getApplicationDocumentsDirectory();
+
+  if (Isar.instanceNames.isEmpty) {
+    return await Isar.open([
+      AppSettingsModelSchema,
+      TransactionModelSchema,
+      CategoriesModelSchema,
+    ], directory: dir.path);
+  }
+
+  return Isar.getInstance()!;
+});
 
 // Provider لقراءة وتحديث قائمة الفئات (الاستعلام اللحظي Stream)
 final categoriesStreamProvider = StreamProvider<List<CategoriesModel>>((ref) {

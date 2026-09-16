@@ -1,4 +1,5 @@
 import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -6,7 +7,7 @@ import '../model/transaction_model.dart';
 
 class BalanceCard extends StatelessWidget {
   final double amount;
-  final List<TransactionModel> transactions; // إضافة قائمة الحركات
+  final List<TransactionModel> transactions;
 
   const BalanceCard({
     super.key,
@@ -14,21 +15,16 @@ class BalanceCard extends StatelessWidget {
     required this.transactions,
   });
 
-  // بناء نقاط الرسم البياني بناءً على تاريخ الحركات
   List<FlSpot> _generateChartSpots() {
     if (transactions.isEmpty) {
       return const [FlSpot(0, 0)];
     }
 
-    // ترتيب المعاملات زمنياً من الأقدم إلى الأحدث
     final sortedTx = List<TransactionModel>.from(transactions)
       ..sort((a, b) => a.date.compareTo(b.date));
 
-    List<FlSpot> spots = [];
+    List<FlSpot> spots = [const FlSpot(0, 0)];
     double runningBalance = 0;
-
-    // إضافة نقطة البداية
-    spots.add(const FlSpot(0, 0));
 
     for (int i = 0; i < sortedTx.length; i++) {
       runningBalance += sortedTx[i].amount;
@@ -40,7 +36,13 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formattedAmount = '${amount.toStringAsFixed(2)} ر.س';
+    final l10n = AppLocalizations.of(context)!;
+
+    // تنسيق المبلغ مع رمز العملة المترجم بحسب اللغة الحالية
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final currencySymbol = isArabic ? 'ر.س' : 'SAR';
+    final formattedAmount = '${amount.toStringAsFixed(2)} $currencySymbol';
+
     final spots = _generateChartSpots();
 
     return Container(
@@ -50,9 +52,9 @@ class BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'الرصيد الكلي',
-            style: TextStyle(
+          Text(
+            l10n.totalBalance, // النص المترجم للرصيد الكلي
+            style: const TextStyle(
               fontFamily: 'Cairo',
               color: Colors.white70,
               fontSize: 14,
@@ -65,7 +67,7 @@ class BalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // الرسم البياني التفاعلي مع تغيير الرصيد
+          // الرسم البياني
           SizedBox(
             height: 70,
             child: LineChart(

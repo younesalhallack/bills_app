@@ -1,4 +1,5 @@
 import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
@@ -17,11 +18,10 @@ class TransactionsHistoryScreen extends ConsumerStatefulWidget {
 
 class _TransactionsHistoryScreenState
     extends ConsumerState<TransactionsHistoryScreen> {
-  int _selectedFilterIndex = 0; // 0: الكل, 1: مصاريف, 2: إيرادات
+  int _selectedFilterIndex =
+      0; // 0: الكل/All, 1: مصاريف/Expenses, 2: إيرادات/Income
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-
-  final List<String> _filters = ['الكل', 'مصاريف', 'إيرادات'];
 
   @override
   void initState() {
@@ -39,9 +39,16 @@ class _TransactionsHistoryScreenState
     super.dispose();
   }
 
+  List<String> _getFilterLabels(AppLocalizations l10n) {
+    return [l10n.all, l10n.expenses, l10n.income];
+  }
+
   @override
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).languageCode;
+    final filters = _getFilterLabels(l10n);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -49,7 +56,7 @@ class _TransactionsHistoryScreenState
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('سجل المعاملات', style: AppTextStyles.h1),
+        title: Text(l10n.transactionHistory, style: AppTextStyles.h1),
         actions: [
           IconButton(
             icon: const HeroIcon(
@@ -70,7 +77,7 @@ class _TransactionsHistoryScreenState
                 controller: _searchController,
                 style: AppTextStyles.bodyMedium,
                 decoration: InputDecoration(
-                  hintText: 'البحث عن معاملة أو ملاحظة...',
+                  hintText: l10n.searchTransactionOrNote,
                   hintStyle: AppTextStyles.bodySmall,
                   prefixIcon: const Padding(
                     padding: EdgeInsets.all(12.0),
@@ -105,13 +112,13 @@ class _TransactionsHistoryScreenState
                 height: 38,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _filters.length,
+                  itemCount: filters.length,
                   separatorBuilder: (_, _) =>
                       const SizedBox(width: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final isSelected = _selectedFilterIndex == index;
                     return ChoiceChip(
-                      label: Text(_filters[index]),
+                      label: Text(filters[index]),
                       selected: isSelected,
                       onSelected: (val) {
                         if (val) setState(() => _selectedFilterIndex = index);
@@ -145,17 +152,14 @@ class _TransactionsHistoryScreenState
               Expanded(
                 child: transactionsAsync.when(
                   data: (allTransactions) {
-                    // تطبيق الفلترة بالبحث والنوع
                     final filteredList = allTransactions.where((tx) {
                       final categoryName = tx.category.value?.name ?? '';
                       final note = tx.note ?? '';
 
-                      // أ) التصفية بحسب نص البحث
                       final matchesSearch =
                           categoryName.toLowerCase().contains(_searchQuery) ||
                           note.toLowerCase().contains(_searchQuery);
 
-                      // ب) التصفية بحسب النوع (0: الكل، 1: مصاريف، 2: إيرادات)
                       bool matchesType = true;
                       if (_selectedFilterIndex == 1) {
                         matchesType = tx.amount < 0;
@@ -170,8 +174,8 @@ class _TransactionsHistoryScreenState
                       return Center(
                         child: Text(
                           _searchQuery.isNotEmpty || _selectedFilterIndex != 0
-                              ? 'لا توجد نتائج تطابق التصفية'
-                              : 'لا توجد معاملات مسجلة حتى الآن',
+                              ? l10n.noMatchingResults
+                              : l10n.noTransactionsYet,
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -179,9 +183,10 @@ class _TransactionsHistoryScreenState
                       );
                     }
 
-                    // ج) تجميع المعاملات المفلترة حسب التاريخ
                     final groupedTransactions = _groupTransactionsByDate(
                       filteredList,
+                      l10n,
+                      locale,
                     );
 
                     return ListView.builder(
@@ -204,11 +209,11 @@ class _TransactionsHistoryScreenState
                                   '${isIncome ? "+" : ""}${tx.amount.toStringAsFixed(2)} ${tx.currencyCode}';
                               final formattedTime = DateFormat(
                                 'hh:mm a',
-                                'ar',
+                                locale,
                               ).format(tx.date);
 
                               return _buildTransactionItem(
-                                category?.name ?? (tx.note ?? 'معاملة'),
+                                category?.name ?? (tx.note ?? l10n.transaction),
                                 formattedTime,
                                 formattedAmount,
                                 isIncome,
@@ -228,7 +233,7 @@ class _TransactionsHistoryScreenState
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (err, stack) =>
-                      Center(child: Text('حدث خطأ في تحميل البيانات: $err')),
+                      Center(child: Text('${l10n.errorLoadingData}: $err')),
                 ),
               ),
             ],
@@ -238,9 +243,11 @@ class _TransactionsHistoryScreenState
     );
   }
 
-  // تجميع المعاملات بحسب التاريخ
+  // تجميع المعاملات بحسب التاريخ لدعم اللغات المختلفة
   Map<String, List<TransactionModel>> _groupTransactionsByDate(
     List<TransactionModel> transactions,
+    AppLocalizations l10n,
+    String locale,
   ) {
     final Map<String, List<TransactionModel>> groups = {};
     final now = DateTime.now();
@@ -252,11 +259,13 @@ class _TransactionsHistoryScreenState
       String dateKey;
 
       if (txDate == today) {
-        dateKey = 'اليوم - ${DateFormat('d MMMM', 'ar').format(tx.date)}';
+        dateKey =
+            '${l10n.today} - ${DateFormat('d MMMM', locale).format(tx.date)}';
       } else if (txDate == yesterday) {
-        dateKey = 'الأمس - ${DateFormat('d MMMM', 'ar').format(tx.date)}';
+        dateKey =
+            '${l10n.yesterday} - ${DateFormat('d MMMM', locale).format(tx.date)}';
       } else {
-        dateKey = DateFormat('d MMMM yyyy', 'ar').format(tx.date);
+        dateKey = DateFormat('d MMMM yyyy', locale).format(tx.date);
       }
 
       if (!groups.containsKey(dateKey)) {
@@ -348,8 +357,6 @@ class _TransactionsHistoryScreenState
               ),
             ],
           ),
-
-          // قسم الملاحظات بدون خط فاصل (تم حذف الـ Divider)
           if (note != null && note.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
             Row(

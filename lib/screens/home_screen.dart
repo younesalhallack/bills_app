@@ -1,4 +1,5 @@
 import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:bills_app/screens/transactions_history_screen.dart';
 import 'package:bills_app/widgets/balance_card.dart';
 import 'package:bills_app/widgets/recent_transactions_list.dart';
@@ -16,10 +17,11 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context),
+      appBar: _buildAppBar(context, l10n),
       body: SafeArea(
         child: transactionsAsync.when(
           data: (allTransactions) {
@@ -55,21 +57,21 @@ class HomeScreen extends ConsumerWidget {
                           if (isTablet)
                             _buildTabletLayout(
                               context,
+                              l10n: l10n,
                               netBalance: netBalance,
                               income: totalIncome,
                               expenses: totalExpenses,
-                              allTransactions:
-                                  allTransactions, // تمرير قائمة المعاملات الكلية للرسم البياني
+                              allTransactions: allTransactions,
                               recentTransactions: recentFourTransactions,
                             )
                           else
                             _buildMobileLayout(
                               context,
+                              l10n: l10n,
                               netBalance: netBalance,
                               income: totalIncome,
                               expenses: totalExpenses,
-                              allTransactions:
-                                  allTransactions, // تمرير قائمة المعاملات الكلية للرسم البياني
+                              allTransactions: allTransactions,
                               recentTransactions: recentFourTransactions,
                             ),
                         ],
@@ -82,29 +84,38 @@ class HomeScreen extends ConsumerWidget {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) =>
-              Center(child: Text('حدث خطأ في تحميل البيانات: $err')),
+              Center(child: Text('${l10n.errorLoadingData}: $err')),
         ),
       ),
     );
   }
 
   // AppBar
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    // تحديد هامش الزر حسب اتجاه اللغة لمنع أخطاء التصميم
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final margin = isArabic
+        ? const EdgeInsets.only(left: 16)
+        : const EdgeInsets.only(right: 16);
+
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
       toolbarHeight: 70,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text('فواتيري', style: AppTextStyles.bodySmall),
-          SizedBox(height: 2),
-          Text('أهلاً وسهلاً، أحمد!', style: AppTextStyles.h1),
+        children: [
+          Text(l10n.appName, style: AppTextStyles.bodySmall),
+          const SizedBox(height: 2),
+          Text(l10n.welcomeUser('أحمد'), style: AppTextStyles.h1),
         ],
       ),
       actions: [
         Container(
-          margin: const EdgeInsets.only(left: 16),
+          margin: margin,
           decoration: BoxDecoration(
             color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(12),
@@ -122,31 +133,34 @@ class HomeScreen extends ConsumerWidget {
   // Mobile Layout
   Widget _buildMobileLayout(
     BuildContext context, {
+    required AppLocalizations l10n,
     required double netBalance,
     required double income,
     required double expenses,
-    required List<TransactionModel> allTransactions, // تم إضافة المعامل هنا
+    required List<TransactionModel> allTransactions,
     required List<TransactionModel> recentTransactions,
   }) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final currencySymbol = isArabic ? 'ر.س' : 'SAR';
+
     return Column(
       children: [
-        // بطاقة الرصيد الأساسي مع رسم بياني متفاعل
         BalanceCard(amount: netBalance, transactions: allTransactions),
         const SizedBox(height: AppSpacing.lg),
         Row(
           children: [
             Expanded(
               child: SummaryCard(
-                title: 'المصاريف',
-                amount: '${expenses.toStringAsFixed(2)} ر.س',
+                title: l10n.expenses,
+                amount: '${expenses.toStringAsFixed(2)} $currencySymbol',
                 isIncome: false,
               ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: SummaryCard(
-                title: 'الإيرادات',
-                amount: '${income.toStringAsFixed(2)} ر.س',
+                title: l10n.income,
+                amount: '${income.toStringAsFixed(2)} $currencySymbol',
                 isIncome: true,
               ),
             ),
@@ -164,12 +178,16 @@ class HomeScreen extends ConsumerWidget {
   // Tablet Layout
   Widget _buildTabletLayout(
     BuildContext context, {
+    required AppLocalizations l10n,
     required double netBalance,
     required double income,
     required double expenses,
-    required List<TransactionModel> allTransactions, // تم إضافة المعامل هنا
+    required List<TransactionModel> allTransactions,
     required List<TransactionModel> recentTransactions,
   }) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final currencySymbol = isArabic ? 'ر.س' : 'SAR';
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -183,16 +201,16 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: SummaryCard(
-                      title: 'المصاريف',
-                      amount: '${expenses.toStringAsFixed(2)} ر.س',
+                      title: l10n.expenses,
+                      amount: '${expenses.toStringAsFixed(2)} $currencySymbol',
                       isIncome: false,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: SummaryCard(
-                      title: 'الإيرادات',
-                      amount: '${income.toStringAsFixed(2)} ر.س',
+                      title: l10n.income,
+                      amount: '${income.toStringAsFixed(2)} $currencySymbol',
                       isIncome: true,
                     ),
                   ),

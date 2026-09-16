@@ -1,6 +1,7 @@
+import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
-import 'package:bills_app/core/constants/app_constants.dart';
 
 class BackupSettingsScreen extends StatefulWidget {
   const BackupSettingsScreen({super.key});
@@ -13,26 +14,28 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
   bool _autoBackup = true;
   bool _isBackingUp = false;
 
-  void _runBackup() async {
+  void _runBackup(AppLocalizations l10n) async {
     setState(() => _isBackingUp = true);
-    await Future.delayed(const Duration(seconds: 2)); // save semulation
+    await Future.delayed(const Duration(seconds: 2)); // save simulation
     if (mounted) {
       setState(() => _isBackingUp = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم اكتمال النسخ الاحتياطي بنجاح!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.backupSuccessMessage)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('النسخ الاحتياطي', style: AppTextStyles.h2),
+        title: Text(l10n.backupSettings, style: AppTextStyles.h2),
         leading: IconButton(
           icon: const HeroIcon(
             HeroIcons.chevronRight,
@@ -55,7 +58,7 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       child: const HeroIcon(
                         HeroIcons.cloud,
                         color: AppColors.primary,
@@ -65,13 +68,13 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            'سحابة Google Drive',
+                            l10n.googleDriveCloud,
                             style: AppTextStyles.bodyMedium,
                           ),
                           Text(
-                            'آخر مزامنة: اليوم، 09:00 صباحاً',
+                            l10n.lastSyncStatus,
                             style: AppTextStyles.bodySmall,
                           ),
                         ],
@@ -95,12 +98,12 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
                         HeroIcons.arrowPath,
                         color: AppColors.primary,
                       ),
-                      title: const Text(
-                        'النسخ الاحتياطي التلقائي',
+                      title: Text(
+                        l10n.autoBackup,
                         style: AppTextStyles.bodyMedium,
                       ),
-                      subtitle: const Text(
-                        'حفظ البيانات تلقائياً يومياً',
+                      subtitle: Text(
+                        l10n.autoBackupSubtitle,
                         style: AppTextStyles.bodySmall,
                       ),
                     ),
@@ -120,7 +123,7 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: _isBackingUp ? null : _runBackup,
+                  onPressed: _isBackingUp ? null : () => _runBackup(l10n),
                   icon: _isBackingUp
                       ? const SizedBox(
                           width: 20,
@@ -135,7 +138,7 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
                           color: Colors.white,
                         ),
                   label: Text(
-                    _isBackingUp ? 'جاري النسخ...' : 'إنشاء نسخة احتياطية الآن',
+                    _isBackingUp ? l10n.backingUp : l10n.createBackupNow,
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       color: Colors.white,
@@ -160,9 +163,9 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
                     HeroIcons.cloudArrowDown,
                     color: AppColors.primary,
                   ),
-                  label: const Text(
-                    'استعادة البيانات',
-                    style: TextStyle(
+                  label: Text(
+                    l10n.restoreData,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,

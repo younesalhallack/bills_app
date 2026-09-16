@@ -1,6 +1,7 @@
+import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
-import 'package:bills_app/core/constants/app_constants.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -15,13 +16,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('الأمان والخصوصية', style: AppTextStyles.h2),
+        title: Text(l10n.securityAndPrivacy, style: AppTextStyles.h2),
         leading: IconButton(
           icon: const HeroIcon(
             HeroIcons.chevronRight,
@@ -48,12 +51,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         HeroIcons.fingerPrint,
                         color: AppColors.primary,
                       ),
-                      title: const Text(
-                        'بصمة الوجه / الإصبع',
+                      title: Text(
+                        l10n.biometrics,
                         style: AppTextStyles.bodyMedium,
                       ),
-                      subtitle: const Text(
-                        'تأمين التطبيق بالبصمة الحيوية',
+                      subtitle: Text(
+                        l10n.biometricsSubtitle,
                         style: AppTextStyles.bodySmall,
                       ),
                     ),
@@ -66,12 +69,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         HeroIcons.lockClosed,
                         color: AppColors.primary,
                       ),
-                      title: const Text(
-                        'رمز PIN للحماية',
+                      title: Text(
+                        l10n.pinProtection,
                         style: AppTextStyles.bodyMedium,
                       ),
-                      subtitle: const Text(
-                        'طلب رمز مرور عند فتح التطبيق',
+                      subtitle: Text(
+                        l10n.pinProtectionSubtitle,
                         style: AppTextStyles.bodySmall,
                       ),
                     ),
@@ -88,8 +91,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       HeroIcons.key,
                       color: AppColors.primary,
                     ),
-                    title: const Text(
-                      'تغيير رمز PIN',
+                    title: Text(
+                      l10n.changePin,
                       style: AppTextStyles.bodyMedium,
                     ),
                     trailing: const HeroIcon(

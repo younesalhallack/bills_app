@@ -1,6 +1,7 @@
+import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
-import 'package:bills_app/core/constants/app_constants.dart';
 
 class CurrencySelectionScreen extends StatefulWidget {
   const CurrencySelectionScreen({super.key});
@@ -13,25 +14,30 @@ class CurrencySelectionScreen extends StatefulWidget {
 class _CurrencySelectionScreenState extends State<CurrencySelectionScreen> {
   String _selectedCurrency = 'SAR';
 
-  final List<Map<String, String>> _currencies = [
-    {'code': 'SAR', 'name': 'ريال سعودي', 'symbol': 'ر.س'},
-    {'code': 'AED', 'name': 'درهم إماراتي', 'symbol': 'د.إ'},
-    {'code': 'USD', 'name': 'دولار أمريكي', 'symbol': '\$'},
-    {'code': 'EUR', 'name': 'يورو', 'symbol': '€'},
-    {'code': 'EGP', 'name': 'جنيه مصري', 'symbol': 'ج.م'},
-    {'code': 'KWD', 'name': 'دينار كويتي', 'symbol': 'د.ك'},
-    {'code': 'QAR', 'name': 'ريال قطري', 'symbol': 'ر.ق'},
-  ];
+  List<Map<String, String>> _getCurrencies(AppLocalizations l10n) {
+    return [
+      {'code': 'SAR', 'name': l10n.currencySar, 'symbol': l10n.symbolSar},
+      {'code': 'AED', 'name': l10n.currencyAed, 'symbol': l10n.symbolAed},
+      {'code': 'USD', 'name': l10n.currencyUsd, 'symbol': '\$'},
+      {'code': 'EUR', 'name': l10n.currencyEur, 'symbol': '€'},
+      {'code': 'EGP', 'name': l10n.currencySyr, 'symbol': l10n.symbolEgp},
+      {'code': 'KWD', 'name': l10n.currencyKwd, 'symbol': l10n.symbolKwd},
+      {'code': 'QAR', 'name': l10n.currencyQar, 'symbol': l10n.symbolQar},
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final currencies = _getCurrencies(l10n);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('العملة الأساسية', style: AppTextStyles.h2),
+        title: Text(l10n.mainCurrency, style: AppTextStyles.h2),
         leading: IconButton(
           icon: const HeroIcon(
             HeroIcons.chevronRight,
@@ -43,11 +49,11 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen> {
       body: SafeArea(
         child: ListView.separated(
           padding: AppSpacing.screenPadding,
-          itemCount: _currencies.length,
+          itemCount: currencies.length,
           separatorBuilder: (context, index) =>
               const SizedBox(height: AppSpacing.xs),
           itemBuilder: (context, index) {
-            final currency = _currencies[index];
+            final currency = currencies[index];
             final bool isSelected = _selectedCurrency == currency['code'];
 
             return Container(
@@ -61,7 +67,7 @@ class _CurrencySelectionScreenState extends State<CurrencySelectionScreen> {
                 },
                 leading: CircleAvatar(
                   backgroundColor: isSelected
-                      ? AppColors.primary.withOpacity(0.1)
+                      ? AppColors.primary.withValues(alpha: 0.1)
                       : AppColors.background,
                   child: Text(
                     currency['symbol']!,

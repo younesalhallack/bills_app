@@ -1,4 +1,5 @@
 import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:bills_app/model/transaction_model.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
@@ -16,6 +17,9 @@ class RecentTransactionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).languageCode;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -23,12 +27,12 @@ class RecentTransactionsList extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('أحدث المعاملات', style: AppTextStyles.h2),
+            Text(l10n.recentTransactions, style: AppTextStyles.h2),
             TextButton(
-              onPressed: onSeeMorePressed, // ربط الانتقال بشاشة سجل الحركات
-              child: const Text(
-                'عرض الكل',
-                style: TextStyle(fontFamily: 'Cairo'),
+              onPressed: onSeeMorePressed,
+              child: Text(
+                l10n.seeAll,
+                style: const TextStyle(fontFamily: 'Cairo'),
               ),
             ),
           ],
@@ -43,7 +47,7 @@ class RecentTransactionsList extends StatelessWidget {
             decoration: AppDecorations.cardDecoration,
             child: Center(
               child: Text(
-                'لا توجد معاملات حديثة',
+                l10n.noRecentTransactions,
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -51,7 +55,7 @@ class RecentTransactionsList extends StatelessWidget {
             ),
           )
         else
-          // عرض القائمة الديناميكية (أحدث 4 حركات)
+          // عرض القائمة الديناميكية
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -63,9 +67,11 @@ class RecentTransactionsList extends StatelessWidget {
               final isIncome = tx.amount > 0;
               final formattedAmount =
                   '${isIncome ? "+" : ""}${tx.amount.toStringAsFixed(2)} ${tx.currencyCode}';
+
+              // تنسيق التاريخ بحسب لغة الجهاز الحالية (ar أو en)
               final formattedDate = DateFormat(
                 'd MMMM - hh:mm a',
-                'ar',
+                locale,
               ).format(tx.date);
 
               return Container(
@@ -101,7 +107,7 @@ class RecentTransactionsList extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                category?.name ?? (tx.note ?? 'معاملة'),
+                                category?.name ?? (tx.note ?? l10n.transaction),
                                 style: AppTextStyles.h3,
                               ),
                               Text(
@@ -119,14 +125,13 @@ class RecentTransactionsList extends StatelessWidget {
                             fontSize: 15,
                             color: isIncome
                                 ? AppColors.success
-                                : AppColors
-                                      .danger, // أحمر للمصاريف وأخضر للإيراد
+                                : AppColors.danger,
                           ),
                         ),
                       ],
                     ),
 
-                    // عرض الملاحظة أسفل التفاصيل في حال وجودها
+                    // عرض الملاحظة أسفل التفاصيل
                     if (tx.note != null && tx.note!.trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Row(
@@ -158,7 +163,6 @@ class RecentTransactionsList extends StatelessWidget {
     );
   }
 
-  // إرجاع أيقونة الفئة المناسبة
   HeroIcons _getHeroIconData(String? iconName) {
     switch (iconName) {
       case 'shoppingCart':

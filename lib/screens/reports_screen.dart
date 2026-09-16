@@ -1,4 +1,5 @@
 import 'package:bills_app/core/constants/app_constants.dart';
+import 'package:bills_app/l10n/app_localizations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,15 +21,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   int _categoryType = 0; // 0: expenses, 1: income
   DateTime _selectedDate = DateTime.now(); // الشهر المختار حالياً
 
-  // قائمة ألوان افتراضية للفئات
-
   @override
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).languageCode;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(context, l10n),
       body: SafeArea(
         child: transactionsAsync.when(
           data: (allTransactions) {
@@ -39,25 +40,32 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             }).toList();
 
             // 2. معالجة وتجميع بيانات الفئات للشهر المحدد
-            final categoryData = _processCategoryData(currentMonthTx);
+            final categoryData = _processCategoryData(
+              currentMonthTx,
+              l10n,
+              locale,
+            );
 
             // 3. معالجة بيانات المقارنة الشهرية (لآخر 3 أشهر)
-            final monthlyComparisonData = _processMonthlyData(allTransactions);
+            final monthlyComparisonData = _processMonthlyData(
+              allTransactions,
+              locale,
+            );
 
             return SingleChildScrollView(
               padding: AppSpacing.screenPadding,
               child: Column(
                 children: [
                   // محدد الشهر
-                  _buildMonthPicker(),
+                  _buildMonthPicker(locale),
                   const SizedBox(height: AppSpacing.md),
 
                   // شريط تبديل طريقة العرض
-                  _buildViewToggle(),
+                  _buildViewToggle(l10n),
                   const SizedBox(height: AppSpacing.md),
 
                   if (_selectedView == 0) ...[
-                    _buildCategoryTypeToggle(),
+                    _buildCategoryTypeToggle(l10n),
                     const SizedBox(height: AppSpacing.lg),
                   ] else ...[
                     const SizedBox(height: AppSpacing.sm),
@@ -65,21 +73,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                   // الرسم البياني (دائري أو أعمدة)
                   _selectedView == 0
-                      ? _buildCategoryPieChartCard(categoryData)
-                      : _buildMonthlyBarChartCard(monthlyComparisonData),
+                      ? _buildCategoryPieChartCard(categoryData, l10n)
+                      : _buildMonthlyBarChartCard(monthlyComparisonData, l10n),
 
                   const SizedBox(height: AppSpacing.xl),
 
                   // تفاصيل الفئات
                   if (_selectedView == 0)
-                    _buildCategoryBreakdownList(categoryData),
+                    _buildCategoryBreakdownList(categoryData, l10n),
                 ],
               ),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) =>
-              Center(child: Text('حدث خطأ أثناء تحميل البيانات: $err')),
+              Center(child: Text('${l10n.errorLoadingData}: $err')),
         ),
       ),
     );
@@ -88,8 +96,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   // --- تجميع بيانات الفئات حسب نوع الحركة (إيراد/مصروف) ---
   List<Map<String, dynamic>> _processCategoryData(
     List<TransactionModel> monthTx,
+    AppLocalizations l10n,
+    String locale,
   ) {
     final isExpense = _categoryType == 0;
+    final currencySymbol = locale == 'ar' ? 'ر.س' : 'SAR';
 
     final filteredTx = monthTx.where((tx) {
       return isExpense ? tx.amount < 0 : tx.amount > 0;
@@ -100,7 +111,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     for (var tx in filteredTx) {
       final cat = tx.category.value;
-      final catName = cat?.name ?? 'بدون فئة';
+      final catName = cat?.name ?? l10n.noCategory;
       final iconName = cat?.iconName;
       final amount = tx.amount.abs();
       totalAmount += amount;
@@ -126,15 +137,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         'percent': '${percent.toStringAsFixed(1)}%',
         'value': percent,
         'amountValue': amount,
-        'amount': '${amount.toStringAsFixed(2)} ر.س',
+        'amount': '${amount.toStringAsFixed(2)} $currencySymbol',
         'icon': _getHeroIconData(item['iconName']),
-        'color': _getCategoryColor(title), // استخدام اللون المميز للفئة
+        'color': _getCategoryColor(title),
       };
     }).toList();
   }
 
   // --- تجميع البيانات الشهرية للمقارنة (الشهر المختار والشهران السابقان) ---
-  List<Map<String, dynamic>> _processMonthlyData(List<TransactionModel> allTx) {
+  List<Map<String, dynamic>> _processMonthlyData(
+    List<TransactionModel> allTx,
+    String locale,
+  ) {
     List<Map<String, dynamic>> monthsData = [];
 
     for (int i = 2; i >= 0; i--) {
@@ -161,7 +175,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       }
 
       monthsData.add({
-        'monthName': DateFormat('MMMM', 'ar').format(targetDate),
+        'monthName': DateFormat('MMMM', locale).format(targetDate),
         'income': income,
         'expense': expense,
       });
@@ -171,12 +185,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   // --- AppBar ---
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final leadingMargin = isArabic
+        ? const EdgeInsets.only(right: 16)
+        : const EdgeInsets.only(left: 16);
+
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
-      title: const Text('التقارير', style: AppTextStyles.h1),
+      title: Text(l10n.reports, style: AppTextStyles.h1),
       actions: [
         IconButton(
           icon: const HeroIcon(HeroIcons.bars3, color: AppColors.textPrimary),
@@ -184,7 +206,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ),
       ],
       leading: Container(
-        margin: const EdgeInsets.only(right: 16),
+        margin: leadingMargin,
         child: IconButton(
           icon: const HeroIcon(HeroIcons.bell, color: AppColors.textPrimary),
           onPressed: () {},
@@ -194,8 +216,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   // --- محدد الشهر ---
-  Widget _buildMonthPicker() {
-    final formattedMonth = DateFormat('MMMM yyyy', 'ar').format(_selectedDate);
+  Widget _buildMonthPicker(String locale) {
+    final formattedMonth = DateFormat(
+      'MMMM yyyy',
+      locale,
+    ).format(_selectedDate);
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -239,7 +264,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   // --- شريط التبديل الرئيسي ---
-  Widget _buildViewToggle() {
+  Widget _buildViewToggle(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -250,14 +275,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         children: [
           Expanded(
             child: _toggleButton(
-              title: 'توزيع الفئات',
+              title: l10n.categoryDistribution,
               isSelected: _selectedView == 0,
               onTap: () => setState(() => _selectedView = 0),
             ),
           ),
           Expanded(
             child: _toggleButton(
-              title: 'مقارنة شهرية',
+              title: l10n.monthlyComparison,
               isSelected: _selectedView == 1,
               onTap: () => setState(() => _selectedView = 1),
             ),
@@ -268,12 +293,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   // --- شريط تبديل نوع الفئة (إيراد / مصروف) ---
-  Widget _buildCategoryTypeToggle() {
+  Widget _buildCategoryTypeToggle(AppLocalizations l10n) {
     return Row(
       children: [
         Expanded(
           child: _subToggleButton(
-            title: 'المصاريف',
+            title: l10n.expenses,
             isSelected: _categoryType == 0,
             activeColor: AppColors.danger,
             onTap: () => setState(() => _categoryType = 0),
@@ -282,7 +307,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _subToggleButton(
-            title: 'الإيرادات',
+            title: l10n.income,
             isSelected: _categoryType == 1,
             activeColor: AppColors.success,
             onTap: () => setState(() => _categoryType = 1),
@@ -317,7 +342,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           child: Text(
             title,
             style: TextStyle(
-              fontFamily: 'Cairo',
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isSelected ? activeColor : AppColors.textSecondary,
               fontSize: 13,
@@ -347,7 +371,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           child: Text(
             title,
             style: TextStyle(
-              fontFamily: 'Cairo',
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isSelected ? AppColors.primary : AppColors.textSecondary,
             ),
@@ -358,10 +381,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   // --- الرسم البياني الدائري للفئات ---
-  Widget _buildCategoryPieChartCard(List<Map<String, dynamic>> categories) {
+  Widget _buildCategoryPieChartCard(
+    List<Map<String, dynamic>> categories,
+    AppLocalizations l10n,
+  ) {
     final title = _categoryType == 0
-        ? 'توزيع المصاريف حسب الفئة'
-        : 'توزيع الإيرادات حسب الفئة';
+        ? l10n.expensesCategoryDistribution
+        : l10n.incomeCategoryDistribution;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -371,11 +397,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           Text(title, style: AppTextStyles.h2),
           const SizedBox(height: AppSpacing.lg),
           categories.isEmpty
-              ? const SizedBox(
+              ? SizedBox(
                   height: 180,
                   child: Center(
                     child: Text(
-                      'لا توجد بيانات لهذا الشهر',
+                      l10n.noDataForThisMonth,
                       style: AppTextStyles.bodySmall,
                     ),
                   ),
@@ -391,9 +417,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           sections: categories.map((item) {
                             final double value = (item['value'] as num)
                                 .toDouble();
-                            final bool showTitle =
-                                value >=
-                                8; // إظهار النص داخل الدائرة فقط للنسب 8% فأكثر لضمان الوضوح
+                            final bool showTitle = value >= 8;
 
                             return PieChartSectionData(
                               color: item['color'] as Color,
@@ -413,8 +437,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-
-                    // دليل الألوان (Legend) لعرض اسم الفئة والنسبة بشكل واضح تحت الرسم البياني
                     Wrap(
                       spacing: 12,
                       runSpacing: 8,
@@ -451,20 +473,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   // --- رسم الأعمدة البياني للمقارنة الشهرية ---
-  Widget _buildMonthlyBarChartCard(List<Map<String, dynamic>> monthlyData) {
+  Widget _buildMonthlyBarChartCard(
+    List<Map<String, dynamic>> monthlyData,
+    AppLocalizations l10n,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: AppDecorations.cardDecoration,
       child: Column(
         children: [
-          const Text('الإيرادات والمصاريف شهرياً', style: AppTextStyles.h2),
+          Text(l10n.monthlyIncomeAndExpenses, style: AppTextStyles.h2),
           const SizedBox(height: AppSpacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _indicator(AppColors.success, 'الإيرادات'),
+              _indicator(AppColors.success, l10n.income),
               const SizedBox(width: AppSpacing.lg),
-              _indicator(AppColors.danger, 'المصاريف'),
+              _indicator(AppColors.danger, l10n.expenses),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -554,10 +579,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   // --- قائمة تفاصيل الفئات والنسب ---
-  Widget _buildCategoryBreakdownList(List<Map<String, dynamic>> categories) {
+  Widget _buildCategoryBreakdownList(
+    List<Map<String, dynamic>> categories,
+    AppLocalizations l10n,
+  ) {
     final listTitle = _categoryType == 0
-        ? 'تفاصيل المصاريف'
-        : 'تفاصيل الإيرادات';
+        ? l10n.expenseDetails
+        : l10n.incomeDetails;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,9 +597,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 width: double.infinity,
                 decoration: AppDecorations.cardDecoration,
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'لا توجد تفاصيل متاحة',
+                    l10n.noDetailsAvailable,
                     style: AppTextStyles.bodySmall,
                   ),
                 ),
@@ -615,7 +643,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                 style: AppTextStyles.h3,
                               ),
                               Text(
-                                'نسبة التحصيل/الاستهلاك: ${cat['percent']}',
+                                l10n.percentageRate(cat['percent'] as String),
                                 style: AppTextStyles.bodySmall,
                               ),
                             ],
@@ -669,17 +697,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 }
 
-// دالة لتوليد لون ثابت ومميز بناءً على اسم الفئة
 Color _getCategoryColor(String categoryName) {
   final List<Color> palette = [
-    const Color(0xFF10B981), // Emerald (مثلاً للراتب)
-    const Color(0xFF3B82F6), // Blue (للعمل الحر)
-    const Color(0xFFF59E0B), // Amber (استثمارات)
-    const Color(0xFFEC4899), // Pink
-    const Color(0xFF8B5CF6), // Purple
-    const Color(0xFF06B6D4), // Cyan
-    const Color(0xFFEF4444), // Red
-    const Color(0xFF64748B), // Slate (أخرى)
+    const Color(0xFF10B981),
+    const Color(0xFF3B82F6),
+    const Color(0xFFF59E0B),
+    const Color(0xFFEC4899),
+    const Color(0xFF8B5CF6),
+    const Color(0xFF06B6D4),
+    const Color(0xFFEF4444),
+    const Color(0xFF64748B),
   ];
 
   final int hash = categoryName.hashCode.abs();

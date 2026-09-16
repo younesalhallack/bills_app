@@ -21,13 +21,16 @@ class SummaryCard extends StatelessWidget {
         ? HeroIcons.arrowTrendingUp
         : HeroIcons.arrowTrendingDown;
 
+    //RTL/LTR
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final alignment = isRtl ? Alignment.centerRight : Alignment.centerLeft;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: AppDecorations.cardDecoration,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // إحاطة النصوص بـ Expanded يمنع مشكلة Overflow تماماً
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,17 +43,15 @@ class SummaryCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                // استخدام FittedBox لتقليص حجم المبالغ الكبيرة تلقائياً لتناسب المساحة
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
+                  alignment: alignment,
                   child: Text(amount, style: AppTextStyles.amountMedium),
                 ),
               ],
             ),
           ),
           const SizedBox(width: AppSpacing.xs),
-          // الأيقونة الدائرية
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
