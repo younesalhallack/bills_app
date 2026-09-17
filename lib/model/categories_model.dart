@@ -6,8 +6,9 @@ part 'categories_model.g.dart';
 class CategoriesModel {
   Id id = Isar.autoIncrement;
 
-  late String name; // اسم الفئة (مثل: طعام، راتب، سكن)
-  late String type; // نوع الفئة: 'expense' أو 'income'
-  String? iconName; // اسم الأيقونة (اختياري)
-  bool isSystem = false; // هل هي فئة افتراضية نظامية؟
+  late String name;
+  late String type;
+  String? colorHex;
+  String? iconName;
+  bool isSystem = false;
 }

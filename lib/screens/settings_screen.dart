@@ -48,7 +48,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             onPressed: () {
               Navigator.pop(context);
-              // منطق تسجيل الخروج هنا
+              // logout
             },
             child: Text(
               l10n.logout,
@@ -78,7 +78,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         data: (settings) {
           final isArabic = settings.languageCode == 'ar';
 
-          // جلب تفاصيل العملة الأساسية الحالية ديناميكياً
+          //Dynamically fetch details of the current base currency
           final baseCurrencyText = currencySettingsAsync.when(
             data: (currencySettings) {
               if (currencySettings == null) return '';
@@ -98,7 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // بطاقة الملف الشخصي
+                  // profile card
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: AppDecorations.cardDecoration,
@@ -145,7 +145,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
-                  // التفضيلات العامة
+                  //  general Preferences
                   Text(l10n.generalPreferences, style: AppTextStyles.h3),
                   const SizedBox(height: AppSpacing.sm),
 
@@ -190,7 +190,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ]),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // الأمان والبيانات
+                  //  data and security
                   Text(l10n.securityAndData, style: AppTextStyles.h3),
                   const SizedBox(height: AppSpacing.sm),
 
@@ -222,7 +222,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ]),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // زر تسجيل الخروج
+                  // logout btn
                   SizedBox(
                     width: double.infinity,
                     child: TextButton.icon(

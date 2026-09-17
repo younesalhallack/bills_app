@@ -8,13 +8,12 @@ part 'transaction_model.g.dart';
 class TransactionModel {
   Id id = Isar.autoIncrement;
 
-  late double amount; // قيمة المبلغ
-  late DateTime date; // تاريخ المعاملة
+  late double amount;
+  late DateTime date;
   late String currencyCode;
   double exchangeRate = 1.0;
   double baseAmount = 0.0;
-  String? note; // ملاحظات أو وصف اختياري
+  String? note;
 
-  // علاقة ربط المعاملة بالفئة الخاصة بها
   final category = IsarLink<CategoriesModel>();
 }

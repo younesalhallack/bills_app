@@ -1,13 +1,12 @@
 import 'package:bills_app/core/constants/app_constants.dart';
 import 'package:bills_app/l10n/app_localizations.dart';
+import 'package:bills_app/model/transaction_model.dart';
+import 'package:bills_app/providers/isar_providers.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:intl/intl.dart';
-
-import '../model/transaction_model.dart';
-import '../providers/isar_providers.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -17,13 +16,22 @@ class ReportsScreen extends ConsumerStatefulWidget {
 }
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
-  int _selectedView = 0; // 0: by category, 1: by monthly comparison
-  int _categoryType = 0; // 0: expenses, 1: income
-  DateTime _selectedDate = DateTime.now(); // الشهر المختار حالياً
+  int _selectedView = 0;
+  int _categoryType = 0;
+  DateTime _selectedDate = DateTime.now();
+
+  // optomize amount format
+  String _formatAmount(double value) {
+    final formatter = NumberFormat('#,##0.00', 'en_US');
+    return formatter.format(value.abs());
+  }
 
   @override
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
+    final currencySettings = ref.watch(currencySettingsStreamProvider).value;
+    final baseCurrencyCode = currencySettings?.baseCurrencyCode ?? '';
+
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
 
@@ -33,20 +41,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       body: SafeArea(
         child: transactionsAsync.when(
           data: (allTransactions) {
-            // 1. تصفية معاملات الشهر المحدد
             final currentMonthTx = allTransactions.where((tx) {
               return tx.date.year == _selectedDate.year &&
                   tx.date.month == _selectedDate.month;
             }).toList();
 
-            // 2. معالجة وتجميع بيانات الفئات للشهر المحدد
             final categoryData = _processCategoryData(
               currentMonthTx,
+              baseCurrencyCode,
               l10n,
-              locale,
             );
 
-            // 3. معالجة بيانات المقارنة الشهرية (لآخر 3 أشهر)
             final monthlyComparisonData = _processMonthlyData(
               allTransactions,
               locale,
@@ -56,11 +61,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               padding: AppSpacing.screenPadding,
               child: Column(
                 children: [
-                  // محدد الشهر
                   _buildMonthPicker(locale),
                   const SizedBox(height: AppSpacing.md),
 
-                  // شريط تبديل طريقة العرض
                   _buildViewToggle(l10n),
                   const SizedBox(height: AppSpacing.md),
 
@@ -71,14 +74,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     const SizedBox(height: AppSpacing.sm),
                   ],
 
-                  // الرسم البياني (دائري أو أعمدة)
                   _selectedView == 0
                       ? _buildCategoryPieChartCard(categoryData, l10n)
                       : _buildMonthlyBarChartCard(monthlyComparisonData, l10n),
 
                   const SizedBox(height: AppSpacing.xl),
 
-                  // تفاصيل الفئات
+                  //  categories details
                   if (_selectedView == 0)
                     _buildCategoryBreakdownList(categoryData, l10n),
                 ],
@@ -93,17 +95,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- تجميع بيانات الفئات حسب نوع الحركة (إيراد/مصروف) ---
+  //  get data for categories compare
   List<Map<String, dynamic>> _processCategoryData(
     List<TransactionModel> monthTx,
+    String baseCurrencyCode,
     AppLocalizations l10n,
-    String locale,
   ) {
     final isExpense = _categoryType == 0;
-    final currencySymbol = locale == 'ar' ? 'ر.س' : 'SAR';
 
     final filteredTx = monthTx.where((tx) {
-      return isExpense ? tx.amount < 0 : tx.amount > 0;
+      return isExpense ? tx.baseAmount < 0 : tx.baseAmount > 0;
     }).toList();
 
     double totalAmount = 0;
@@ -113,7 +114,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       final cat = tx.category.value;
       final catName = cat?.name ?? l10n.noCategory;
       final iconName = cat?.iconName;
-      final amount = tx.amount.abs();
+      final colorHex = cat?.colorHex;
+      final amount = tx.baseAmount.abs();
       totalAmount += amount;
 
       if (grouped.containsKey(catName)) {
@@ -123,6 +125,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           'title': catName,
           'amount': amount,
           'iconName': iconName,
+          'colorHex': colorHex,
         };
       }
     }
@@ -137,14 +140,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         'percent': '${percent.toStringAsFixed(1)}%',
         'value': percent,
         'amountValue': amount,
-        'amount': '${amount.toStringAsFixed(2)} $currencySymbol',
+        'amount': '${_formatAmount(amount)} $baseCurrencyCode',
         'icon': _getHeroIconData(item['iconName']),
-        'color': _getCategoryColor(title),
+        'color': _getCategoryColor(title, item['colorHex']),
       };
     }).toList();
   }
 
-  // --- تجميع البيانات الشهرية للمقارنة (الشهر المختار والشهران السابقان) ---
+  // --- get data for compare
   List<Map<String, dynamic>> _processMonthlyData(
     List<TransactionModel> allTx,
     String locale,
@@ -167,10 +170,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       double expense = 0;
 
       for (var tx in monthTx) {
-        if (tx.amount > 0) {
-          income += tx.amount;
+        if (tx.baseAmount > 0) {
+          income += tx.baseAmount;
         } else {
-          expense += tx.amount.abs();
+          expense += tx.baseAmount.abs();
         }
       }
 
@@ -184,7 +187,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     return monthsData;
   }
 
-  // --- AppBar ---
+  //  AppBar
   PreferredSizeWidget _buildAppBar(
     BuildContext context,
     AppLocalizations l10n,
@@ -215,7 +218,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- محدد الشهر ---
+  // ---  select a month ---
   Widget _buildMonthPicker(String locale) {
     final formattedMonth = DateFormat(
       'MMMM yyyy',
@@ -263,7 +266,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- شريط التبديل الرئيسي ---
+  // ---    by categories/monthly compare
   Widget _buildViewToggle(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(4),
@@ -292,7 +295,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- شريط تبديل نوع الفئة (إيراد / مصروف) ---
+  // ---     income/outcome
   Widget _buildCategoryTypeToggle(AppLocalizations l10n) {
     return Row(
       children: [
@@ -380,7 +383,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- الرسم البياني الدائري للفئات ---
+  //  categories pie chart
   Widget _buildCategoryPieChartCard(
     List<Map<String, dynamic>> categories,
     AppLocalizations l10n,
@@ -472,7 +475,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- رسم الأعمدة البياني للمقارنة الشهرية ---
+  // --- monthly compare barchart---
   Widget _buildMonthlyBarChartCard(
     List<Map<String, dynamic>> monthlyData,
     AppLocalizations l10n,
@@ -578,7 +581,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- قائمة تفاصيل الفئات والنسب ---
+  // --- categories breakdown list
   Widget _buildCategoryBreakdownList(
     List<Map<String, dynamic>> categories,
     AppLocalizations l10n,
@@ -662,7 +665,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  // --- أيقونات الفئات ---
+  //   category icons
   HeroIcons _getHeroIconData(String? iconName) {
     switch (iconName) {
       case 'shoppingCart':
@@ -695,20 +698,29 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         return HeroIcons.tag;
     }
   }
-}
 
-Color _getCategoryColor(String categoryName) {
-  final List<Color> palette = [
-    const Color(0xFF10B981),
-    const Color(0xFF3B82F6),
-    const Color(0xFFF59E0B),
-    const Color(0xFFEC4899),
-    const Color(0xFF8B5CF6),
-    const Color(0xFF06B6D4),
-    const Color(0xFFEF4444),
-    const Color(0xFF64748B),
-  ];
+  // get colors---
+  Color _getCategoryColor(String categoryName, String? colorHex) {
+    if (colorHex != null && colorHex.isNotEmpty) {
+      final hex = colorHex.replaceAll('#', '');
+      final val = int.tryParse(hex, radix: 16);
+      if (val != null) {
+        return Color(hex.length == 6 ? 0xFF000000 | val : val);
+      }
+    }
 
-  final int hash = categoryName.hashCode.abs();
-  return palette[hash % palette.length];
+    final List<Color> palette = [
+      const Color(0xFF10B981),
+      const Color(0xFF3B82F6),
+      const Color(0xFFF59E0B),
+      const Color(0xFFEC4899),
+      const Color(0xFF8B5CF6),
+      const Color(0xFF06B6D4),
+      const Color(0xFFEF4444),
+      const Color(0xFF64748B),
+    ];
+
+    final int hash = categoryName.hashCode.abs();
+    return palette[hash % palette.length];
+  }
 }

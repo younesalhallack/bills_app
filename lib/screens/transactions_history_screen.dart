@@ -19,7 +19,7 @@ class TransactionsHistoryScreen extends ConsumerStatefulWidget {
 class _TransactionsHistoryScreenState
     extends ConsumerState<TransactionsHistoryScreen> {
   int _selectedFilterIndex =
-      0; // 0: الكل/All, 1: مصاريف/Expenses, 2: إيرادات/Income
+      0; // 0: الكل/All, 1: مصاريف/outcome, 2: إيرادات/Income
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -46,6 +46,9 @@ class _TransactionsHistoryScreenState
   @override
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
+    final currencySettings = ref.watch(currencySettingsStreamProvider).value;
+    final baseCurrencyCode = currencySettings?.baseCurrencyCode ?? '';
+
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
     final filters = _getFilterLabels(l10n);
@@ -72,7 +75,7 @@ class _TransactionsHistoryScreenState
           padding: AppSpacing.screenPadding,
           child: Column(
             children: [
-              // 1. شريط البحث
+              // search bar
               TextField(
                 controller: _searchController,
                 style: AppTextStyles.bodyMedium,
@@ -107,7 +110,7 @@ class _TransactionsHistoryScreenState
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // 2. الفلاتر السريعة (Chips)
+              //  quick filtters
               SizedBox(
                 height: 38,
                 child: ListView.separated(
@@ -148,7 +151,6 @@ class _TransactionsHistoryScreenState
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // 3. قائمة المعاملات الممتدة مع تطبيق الفلاتر والبحث
               Expanded(
                 child: transactionsAsync.when(
                   data: (allTransactions) {
@@ -162,9 +164,9 @@ class _TransactionsHistoryScreenState
 
                       bool matchesType = true;
                       if (_selectedFilterIndex == 1) {
-                        matchesType = tx.amount < 0;
+                        matchesType = tx.baseAmount < 0;
                       } else if (_selectedFilterIndex == 2) {
-                        matchesType = tx.amount > 0;
+                        matchesType = tx.baseAmount > 0;
                       }
 
                       return matchesSearch && matchesType;
@@ -197,6 +199,7 @@ class _TransactionsHistoryScreenState
                         );
                         final dayTransactions =
                             groupedTransactions[dateHeader]!;
+                        final formatter = NumberFormat('#,##0.00', 'en_US');
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,24 +207,37 @@ class _TransactionsHistoryScreenState
                             _buildDateHeader(dateHeader),
                             ...dayTransactions.map((tx) {
                               final category = tx.category.value;
-                              final isIncome = tx.amount > 0;
-                              final formattedAmount =
-                                  '${isIncome ? "+" : ""}${tx.amount.toStringAsFixed(2)} ${tx.currencyCode}';
+                              final isIncome = tx.baseAmount > 0;
+                              final formattedBaseAmountValue = formatter.format(
+                                tx.baseAmount.abs(),
+                              );
+                              final formattedBaseAmount =
+                                  '${isIncome ? "+" : ""}$formattedBaseAmountValue $baseCurrencyCode';
+
+                              final isDifferentCurrency =
+                                  tx.currencyCode != baseCurrencyCode;
+                              final formattedOriginalAmountValue = formatter
+                                  .format(tx.amount.abs());
+                              final formattedOriginalAmount =
+                                  '$formattedOriginalAmountValue ${tx.currencyCode}';
+
                               final formattedTime = DateFormat(
                                 'hh:mm a',
                                 locale,
                               ).format(tx.date);
 
                               return _buildTransactionItem(
-                                category?.name ?? (tx.note ?? l10n.transaction),
-                                formattedTime,
-                                formattedAmount,
-                                isIncome,
-                                _getHeroIconData(category?.iconName),
-                                isIncome
-                                    ? AppColors.success.withValues(alpha: 0.15)
-                                    : AppColors.danger.withValues(alpha: 0.15),
-                                tx.note,
+                                title:
+                                    category?.name ??
+                                    (tx.note ?? l10n.transaction),
+                                time: formattedTime,
+                                formattedBaseAmount: formattedBaseAmount,
+                                formattedOriginalAmount: isDifferentCurrency
+                                    ? formattedOriginalAmount
+                                    : null,
+                                isIncome: isIncome,
+                                icon: _getHeroIconData(category?.iconName),
+                                note: tx.note,
                               );
                             }),
                             const SizedBox(height: AppSpacing.sm),
@@ -243,7 +259,7 @@ class _TransactionsHistoryScreenState
     );
   }
 
-  // تجميع المعاملات بحسب التاريخ لدعم اللغات المختلفة
+  // Group transactions by date to support different languages
   Map<String, List<TransactionModel>> _groupTransactionsByDate(
     List<TransactionModel> transactions,
     AppLocalizations l10n,
@@ -307,15 +323,17 @@ class _TransactionsHistoryScreenState
     );
   }
 
-  Widget _buildTransactionItem(
-    String title,
-    String time,
-    String amount,
-    bool isIncome,
-    HeroIcons icon,
-    Color bgColor, [
+  Widget _buildTransactionItem({
+    required String title,
+    required String time,
+    required String formattedBaseAmount,
+    String? formattedOriginalAmount,
+    required bool isIncome,
+    required HeroIcons icon,
     String? note,
-  ]) {
+  }) {
+    final color = isIncome ? AppColors.success : AppColors.danger;
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -329,12 +347,10 @@ class _TransactionsHistoryScreenState
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: bgColor,
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(
-                  child: HeroIcon(icon, color: AppColors.textPrimary),
-                ),
+                child: Center(child: HeroIcon(icon, color: color)),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -346,14 +362,32 @@ class _TransactionsHistoryScreenState
                   ],
                 ),
               ),
-              Text(
-                amount,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: isIncome ? AppColors.success : AppColors.danger,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // amount in base currency
+                  Text(
+                    formattedBaseAmount,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: color,
+                    ),
+                  ),
+
+                  //  The original amount if the transaction was in a different currency
+                  if (formattedOriginalAmount != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '($formattedOriginalAmount)',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),

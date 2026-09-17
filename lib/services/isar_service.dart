@@ -9,7 +9,7 @@ import '../model/transaction_model.dart';
 class IsarService {
   static late Isar _isarInstance;
 
-  // فتح قاعدة البيانات وتوليد الفئات الافتراضية عند أول تشغيل
+  // open db
   static Future<void> initialize() async {
     final dir = await getApplicationDocumentsDirectory();
 
@@ -22,19 +22,19 @@ class IsarService {
           CurrencySettingsModelSchema,
         ],
         directory: dir.path,
-        inspector: true, // يتيح لك معاينة البيانات أثتاء التطوير
+        inspector: true, // remove it in release
       );
     } else {
       _isarInstance = Isar.getInstance()!;
     }
 
-    // التحقق هل توجد فئات مخزنة؟ إذا كانت فارغة، نضيف فئات افتراضية
+    // check catigories
     await _seedDefaultCategories();
   }
 
   static Isar get db => _isarInstance;
 
-  // إضافة فئات افتراضية أولية للتطبيق
+  //  add default categories => i need to move it to localizations
   static Future<void> _seedDefaultCategories() async {
     final count = await _isarInstance.categoriesModels.count();
     if (count == 0) {
@@ -67,11 +67,12 @@ class IsarService {
     }
   }
 
+  //calculate Total balance
   double calculateTotalBalance(List<TransactionModel> transactions) {
     return transactions.fold(0.0, (sum, item) => sum + item.baseAmount);
   }
 
-  // حساب إجمالي المصروفات بالعملة الأساسية
+  // calculate Total outcome
   double calculateTotalExpenses(List<TransactionModel> transactions) {
     return transactions
         .where((item) => item.baseAmount < 0)

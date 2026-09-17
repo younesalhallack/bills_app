@@ -4,20 +4,20 @@ part 'app_settings_model.g.dart';
 
 @collection
 class AppSettingsModel {
-  Id id = 0; // معرف ثابت (0) لضمان وجود كائن إعدادات واحد فقط في التطبيق
+  Id id = 0;
 
-  // 1. التفضيلات العامة
+  //general settings
   String currencyCode;
   String currencySymbol;
   String languageCode;
   bool notificationsEnabled;
 
-  // 2. الأمان والبيانات
+  // security
   bool useBiometrics;
   DateTime? lastBackupDate;
   bool autoBackup;
 
-  // 3. الميزانية
+  // 3. budget
   double? monthlyBudgetLimit;
 
   AppSettingsModel({
